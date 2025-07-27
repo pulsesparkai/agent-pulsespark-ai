@@ -33,6 +33,7 @@ import { AppHeader } from './components/Layout/AppHeader';
 import { SidebarNavigation } from './components/Layout/SidebarNavigation';
 import { LoadingSpinner } from './components/Shared/LoadingSpinner';
 import UserNotificationsPanel from './components/User/UserNotificationsPanel';
+import { ActivityFeed } from './components/User/ActivityFeed';
 import { Settings } from 'lucide-react';
 
 // Auth wrapper component
@@ -122,6 +123,37 @@ function App() {
                         <Route path="/chat-settings" element={<ChatSettingsPanel />} />
                         <Route path="/profile-settings" element={<UserProfileSettings />} />
                         <Route path="/analytics" element={<AIAnalyticsDashboard />} />
+                        <Route 
+                          path="/activity-feed-demo" 
+                          element={
+                            <div className="max-w-4xl mx-auto p-8">
+                              <h2 className="text-2xl font-bold text-gray-900 mb-6">Activity Feed Demo</h2>
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div>
+                                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Default Activity Feed</h3>
+                                  <ActivityFeed 
+                                    onActivityClick={(activity) => {
+                                      console.log('Activity clicked:', activity);
+                                      alert(`Clicked: ${activity.description}`);
+                                    }}
+                                    onClearAll={() => {
+                                      console.log('Clear all clicked');
+                                      alert('All activities cleared!');
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Compact Feed (No Actions)</h3>
+                                  <ActivityFeed 
+                                    showActions={false}
+                                    maxHeight="300px"
+                                    className="max-w-sm"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          } 
+                        />
                         <Route 
                           path="/chat-input-demo" 
                           element={
