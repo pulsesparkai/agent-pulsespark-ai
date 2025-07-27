@@ -8,6 +8,7 @@ import { ProjectProvider } from './contexts/ProjectContext';
 import { GitHubProvider } from './contexts/GitHubContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import LoginPage from './components/Auth/LoginPage';
+import SignupPage from './components/Auth/SignupPage';
 import { SignupForm } from './components/Auth/SignupForm';
 import { Dashboard } from './components/Dashboard/Dashboard';
 import { ApiKeysPage } from './components/ApiKeys/ApiKeysPage';
@@ -87,6 +88,7 @@ function App() {
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/chat" element={<ChatPage />} />
                         <Route path="/editor" element={<CodeEditorPage />} />
+                        <Route path="/signup" element={<SignupPage />} />
                         <Route path="/api-keys" element={<ApiKeysPage />} />
                         <Route path="/projects" element={<ProjectsList />} />
                         <Route
