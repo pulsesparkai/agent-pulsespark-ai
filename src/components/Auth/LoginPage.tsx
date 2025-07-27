@@ -4,7 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 /**
  * LoginPage Component
  * 
- * A sleek light-themed login form for agent.pulsespark.ai
+ * A sleek light-themed login form for agent.pulsespark.ai with PulseSpark green branding
  * Features full viewport layout, form validation, and accessibility
  */
 const LoginPage: React.FC = () => {
@@ -59,34 +59,34 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    // Main container - Full viewport height with light gradient background
+    // Main container - Full viewport height with light gradient background (PulseSpark green tint)
     <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-green-50 flex items-center justify-center px-4">
       
-      {/* Login Card Container */}
+      {/* Login Card Container - Pure white with subtle shadow */}
       <div className="bg-white rounded-xl shadow-lg p-10 max-w-md w-full">
         
-        {/* Header Section */}
+        {/* Header Section - PulseSpark branding */}
         <div className="text-center mb-8">
-          {/* Logo Placeholder */}
+          {/* Logo Placeholder - PulseSpark green circular logo */}
           <div className="rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-6 bg-green-600">
             <span className="text-white font-bold text-lg">PS</span>
           </div>
           
-          {/* Main Heading */}
+          {/* Main Heading - Dark gray for readability */}
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Welcome Back
           </h1>
           
-          {/* Subtitle */}
+          {/* Subtitle - Medium gray */}
           <p className="text-gray-600">
             Sign in to your account
           </p>
         </div>
 
-        {/* Login Form */}
+        {/* Login Form - Green focus states throughout */}
         <form onSubmit={handleSubmit} className="space-y-6">
           
-          {/* Email Input Field */}
+          {/* Email Input Field - Light gray background with green focus ring */}
           <div>
             <label htmlFor="email" className="sr-only">
               Email address
@@ -99,16 +99,16 @@ const LoginPage: React.FC = () => {
               className={`
                 w-full p-3 rounded-md bg-gray-100 text-gray-900 placeholder-gray-400
                 border transition duration-200
-                focus:outline-none focus:ring-2 focus:ring-green-500
+                focus:outline-none focus:ring-2 focus:ring-green-600
                 ${errors.email 
                   ? 'border-red-600' 
-                  : 'border-gray-300 focus:border-green-500'
+                  : 'border-gray-300 focus:border-green-600'
                 }
               `}
               placeholder="Enter your email address"
               autoComplete="email"
             />
-            {/* Email Validation Error */}
+            {/* Email Validation Error - Red text for errors */}
             {errors.email && (
               <p className="text-red-600 text-sm mt-2 mb-3">
                 {errors.email}
@@ -116,7 +116,7 @@ const LoginPage: React.FC = () => {
             )}
           </div>
 
-          {/* Password Input Field */}
+          {/* Password Input Field - Light gray background with green focus ring */}
           <div>
             <label htmlFor="password" className="sr-only">
               Password
@@ -130,17 +130,17 @@ const LoginPage: React.FC = () => {
                 className={`
                   w-full p-3 pr-12 rounded-md bg-gray-100 text-gray-900 placeholder-gray-400
                   border transition duration-200
-                  focus:outline-none focus:ring-2 focus:ring-green-500
+                  focus:outline-none focus:ring-2 focus:ring-green-600
                   ${errors.password 
                     ? 'border-red-600' 
-                    : 'border-gray-300 focus:border-green-500'
+                    : 'border-gray-300 focus:border-green-600'
                   }
                 `}
                 placeholder="Enter your password"
                 autoComplete="current-password"
               />
               
-              {/* Password Toggle Button */}
+              {/* Password Toggle Button - Gray with hover effect */}
               <button
                 type="button"
                 onClick={togglePasswordVisibility}
@@ -155,7 +155,7 @@ const LoginPage: React.FC = () => {
               </button>
             </div>
             
-            {/* Password Validation Error */}
+            {/* Password Validation Error - Red text for errors */}
             {errors.password && (
               <p className="text-red-600 text-sm mt-2 mb-3">
                 {errors.password}
@@ -163,7 +163,7 @@ const LoginPage: React.FC = () => {
             )}
           </div>
 
-          {/* Sign In Button */}
+          {/* Sign In Button - PulseSpark green gradient with hover effect */}
           <button
             type="submit"
             className="
@@ -171,14 +171,14 @@ const LoginPage: React.FC = () => {
               hover:from-green-500 hover:to-green-600
               text-white font-bold py-3 rounded-md
               transition duration-200
-              focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2
+              focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2
             "
           >
             Sign In
           </button>
         </form>
 
-        {/* Footer Links */}
+        {/* Footer Links - PulseSpark green accent */}
         <div className="text-center mt-6 text-gray-600">
           <p>
             Don't have an account?{' '}
