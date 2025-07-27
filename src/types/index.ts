@@ -80,3 +80,66 @@ export interface ChatContextType {
   loadChatHistory: () => Promise<void>;
   retryLastMessage: () => Promise<void>;
 }
+
+// Project and File Management Types
+export interface FileNode {
+  id: string;
+  name: string;
+  type: 'file' | 'folder';
+  content?: string;
+  children?: FileNode[];
+  parentId?: string;
+  path: string;
+  language?: string;
+  size?: number;
+  lastModified: string;
+}
+
+export interface Project {
+  id: string;
+  user_id: string;
+  name: string;
+  description?: string;
+  file_tree: FileNode[];
+  github_repo?: string;
+  github_branch?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectContextType {
+  currentProject: Project | null;
+  projects: Project[];
+  selectedFile: FileNode | null;
+  loading: boolean;
+  error: string | null;
+  
+  // Project operations
+  createProject: (name: string, description?: string) => Promise<void>;
+  loadProject: (projectId: string) => Promise<void>;
+  saveProject: () => Promise<void>;
+  deleteProject: (projectId: string) => Promise<void>;
+  
+  // File operations
+  createFile: (parentId: string | null, name: string, type: 'file' | 'folder') => Promise<void>;
+  selectFile: (file: FileNode) => void;
+  updateFileContent: (fileId: string, content: string) => Promise<void>;
+  renameFile: (fileId: string, newName: string) => Promise<void>;
+  deleteFile: (fileId: string) => Promise<void>;
+  
+  // GitHub integration
+  pushToGitHub: (repoName: string, isNewRepo: boolean) => Promise<void>;
+}
+
+export interface GitHubContextType {
+  isAuthenticated: boolean;
+  user: any | null;
+  repositories: any[];
+  loading: boolean;
+  error: string | null;
+  
+  authenticate: () => Promise<void>;
+  loadRepositories: () => Promise<void>;
+  createRepository: (name: string, description?: string) => Promise<any>;
+  pushFiles: (repoName: string, files: FileNode[], commitMessage: string) => Promise<void>;
+}

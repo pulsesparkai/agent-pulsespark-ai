@@ -4,11 +4,14 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ApiKeysProvider } from './contexts/ApiKeysContext';
 import { ChatProvider } from './contexts/ChatContext';
+import { ProjectProvider } from './contexts/ProjectContext';
+import { GitHubProvider } from './contexts/GitHubContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import { SignupForm } from './components/Auth/SignupForm';
 import { Dashboard } from './components/Dashboard/Dashboard';
 import { ApiKeysPage } from './components/ApiKeys/ApiKeysPage';
 import { ChatPage } from './components/Chat/ChatPage';
+import { CodeEditorPage } from './components/CodeEditor/CodeEditorPage';
 import { PlaceholderPage } from './components/Shared/PlaceholderPage';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
@@ -79,35 +82,40 @@ function App() {
           <AuthWrapper>
             <ApiKeysProvider>
               <ChatProvider>
-                <AppLayout>
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/chat" element={<ChatPage />} />
-                    <Route path="/api-keys" element={<ApiKeysPage />} />
-                    <Route 
-                      path="/projects" 
-                      element={
-                        <PlaceholderPage
-                          title="Projects"
-                          description="Manage your projects and integrations here."
-                          icon={<FolderOpen className="w-full h-full" />}
+                <ProjectProvider>
+                  <GitHubProvider>
+                    <AppLayout>
+                      <Routes>
+                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/chat" element={<ChatPage />} />
+                        <Route path="/editor" element={<CodeEditorPage />} />
+                        <Route path="/api-keys" element={<ApiKeysPage />} />
+                        <Route 
+                          path="/projects" 
+                          element={
+                            <PlaceholderPage
+                              title="Projects"
+                              description="Manage your projects and integrations here."
+                              icon={<FolderOpen className="w-full h-full" />}
+                            />
+                          } 
                         />
-                      } 
-                    />
-                    <Route 
-                      path="/settings" 
-                      element={
-                        <PlaceholderPage
-                          title="Settings"
-                          description="Configure your account and application preferences."
-                          icon={<Settings className="w-full h-full" />}
+                        <Route 
+                          path="/settings" 
+                          element={
+                            <PlaceholderPage
+                              title="Settings"
+                              description="Configure your account and application preferences."
+                              icon={<Settings className="w-full h-full" />}
+                            />
+                          } 
                         />
-                      } 
-                    />
-                    <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                  </Routes>
-                </AppLayout>
+                        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                      </Routes>
+                    </AppLayout>
+                  </GitHubProvider>
+                </ProjectProvider>
               </ChatProvider>
             </ApiKeysProvider>
           </AuthWrapper>
