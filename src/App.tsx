@@ -20,6 +20,7 @@ import { ProjectDashboard } from './components/Projects/ProjectDashboard';
 import { ProjectFileExplorer } from './components/Projects/ProjectFileExplorer';
 import ProjectSettingsPanel from './components/Projects/ProjectSettingsPanel';
 import ChatSettingsPanel from './components/Chat/ChatSettingsPanel';
+import UserProfileSettings from './components/User/UserProfileSettings';
 import { PlaceholderPage } from './components/Shared/PlaceholderPage';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
@@ -101,6 +102,7 @@ function App() {
                         <Route path="/file-explorer" element={<ProjectFileExplorer />} />
                         <Route path="/project-settings" element={<ProjectSettingsPanel />} />
                         <Route path="/chat-settings" element={<ChatSettingsPanel />} />
+                        <Route path="/profile-settings" element={<UserProfileSettings />} />
                         <Route
                           path="/settings"
                           element={
