@@ -35,6 +35,7 @@ import { LoadingSpinner } from './components/Shared/LoadingSpinner';
 import UserNotificationsPanel from './components/User/UserNotificationsPanel';
 import { ActivityFeed } from './components/User/ActivityFeed';
 import SubscriptionBillingPage from './components/Billing/SubscriptionBillingPage';
+import PaymentMethodForm from './components/Billing/PaymentMethodForm';
 import { Settings } from 'lucide-react';
 
 // Auth wrapper component
@@ -245,6 +246,25 @@ function App() {
                           element={
                             <div className="max-w-6xl mx-auto">
                               <SubscriptionBillingPage />
+                            </div>
+                          } 
+                        />
+                        <Route 
+                          path="/payment-method" 
+                          element={
+                            <div className="max-w-4xl mx-auto">
+                              <PaymentMethodForm 
+                                onSubmit={async (data) => {
+                                  console.log('Payment method data:', data);
+                                  // Simulate API call
+                                  await new Promise(resolve => setTimeout(resolve, 2000));
+                                  alert('Payment method saved successfully!');
+                                }}
+                                onCancel={() => {
+                                  console.log('Payment form cancelled');
+                                  alert('Payment form cancelled');
+                                }}
+                              />
                             </div>
                           } 
                         />
