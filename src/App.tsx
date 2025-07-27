@@ -100,6 +100,14 @@ function App() {
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/chat" element={<ChatPage />} />
                         <Route path="/chat-interface" element={<ChatInterface />} />
+                        <Route 
+                          path="/chat-window" 
+                          element={
+                            <div className="h-screen">
+                              <ChatWindow />
+                            </div>
+                          } 
+                        />
                         <Route path="/editor" element={<CodeEditorPage />} />
                         <Route path="/signup" element={<SignupPage />} />
                         <Route path="/api-keys" element={<ApiKeysPage />} />
