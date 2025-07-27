@@ -1,0 +1,120 @@
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { ApiKeysProvider } from './contexts/ApiKeysContext';
+import { ChatProvider } from './contexts/ChatContext';
+import { LoginForm } from './components/Auth/LoginForm';
+import { SignupForm } from './components/Auth/SignupForm';
+import { Dashboard } from './components/Dashboard/Dashboard';
+import { ApiKeysPage } from './components/ApiKeys/ApiKeysPage';
+import { ChatPage } from './components/Chat/ChatPage';
+import { PlaceholderPage } from './components/Shared/PlaceholderPage';
+import { Sidebar } from './components/Layout/Sidebar';
+import { Header } from './components/Layout/Header';
+import { LoadingSpinner } from './components/Shared/LoadingSpinner';
+import { FolderOpen, Settings } from 'lucide-react';
+
+// Auth wrapper component
+const AuthWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <AuthPages />;
+  }
+  
+  return <>{children}</>;
+};
+
+// Auth pages component
+const AuthPages: React.FC = () => {
+  const [isLogin, setIsLogin] = useState(true);
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      {isLogin ? (
+        <LoginForm onToggleForm={() => setIsLogin(false)} />
+      ) : (
+        <SignupForm onToggleForm={() => setIsLogin(true)} />
+      )}
+    </div>
+  );
+};
+
+// Main app layout with sidebar
+const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  return (
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)} 
+      />
+      
+      <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
+        
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <NotificationProvider>
+      <AuthProvider>
+        <Router>
+          <AuthWrapper>
+            <ApiKeysProvider>
+              <ChatProvider>
+                <AppLayout>
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/chat" element={<ChatPage />} />
+                    <Route path="/api-keys" element={<ApiKeysPage />} />
+                    <Route 
+                      path="/projects" 
+                      element={
+                        <PlaceholderPage
+                          title="Projects"
+                          description="Manage your projects and integrations here."
+                          icon={<FolderOpen className="w-full h-full" />}
+                        />
+                      } 
+                    />
+                    <Route 
+                      path="/settings" 
+                      element={
+                        <PlaceholderPage
+                          title="Settings"
+                          description="Configure your account and application preferences."
+                          icon={<Settings className="w-full h-full" />}
+                        />
+                      } 
+                    />
+                    <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                  </Routes>
+                </AppLayout>
+              </ChatProvider>
+            </ApiKeysProvider>
+          </AuthWrapper>
+        </Router>
+      </AuthProvider>
+    </NotificationProvider>
+  );
+}
+
+export default App;

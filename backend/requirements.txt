@@ -1,0 +1,24 @@
+# FastAPI Backend Requirements for PulseSpark AI
+# Core framework and ASGI server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# HTTP client for external API calls
+httpx==0.25.2
+
+# Data validation and serialization
+pydantic==2.5.0
+
+# Environment variable management
+python-dotenv==1.0.0
+
+# Additional utilities
+python-multipart==0.0.6  # For form data handling
+python-jose[cryptography]==3.3.0  # For JWT token handling (if needed)
+passlib[bcrypt]==1.7.4  # For password hashing (if needed)
+
+# Development dependencies (optional)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+flake8==6.1.0
