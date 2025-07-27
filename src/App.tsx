@@ -188,6 +188,25 @@ function App() {
                             </div>
                           } 
                         />
+                        <Route 
+                          path="/notifications-demo" 
+                          element={
+                            <div className="max-w-4xl mx-auto p-8">
+                              <h2 className="text-2xl font-bold text-gray-900 mb-6">User Notifications Panel Demo</h2>
+                              <div className="relative">
+                                <div className="bg-gray-100 p-8 rounded-lg">
+                                  <p className="text-gray-600 mb-4">
+                                    This demo shows the notifications panel that would typically appear as a dropdown from the header.
+                                  </p>
+                                  <UserNotificationsPanel 
+                                    isOpen={true}
+                                    onClose={() => console.log('Close notifications')}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          } 
+                        />
                         <Route
                           path="/settings"
                           element={
