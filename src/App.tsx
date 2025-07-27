@@ -7,6 +7,7 @@ import { ChatProvider } from './contexts/ChatContext';
 import { ProjectProvider } from './contexts/ProjectContext';
 import { GitHubProvider } from './contexts/GitHubContext';
 import { LoginForm } from './components/Auth/LoginForm';
+import LoginPage from './components/Auth/LoginPage';
 import { SignupForm } from './components/Auth/SignupForm';
 import { Dashboard } from './components/Dashboard/Dashboard';
 import { ApiKeysPage } from './components/ApiKeys/ApiKeysPage';
@@ -45,7 +46,7 @@ const AuthPages: React.FC = () => {
   return (
     <>
       {isLogin ? (
-        <LoginForm onToggleForm={() => setIsLogin(false)} />
+        <LoginPage />
       ) : (
         <SignupForm onToggleForm={() => setIsLogin(true)} />
       )}
