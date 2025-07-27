@@ -14,6 +14,7 @@ import { Dashboard } from './components/Dashboard/Dashboard';
 import { ApiKeysPage } from './components/ApiKeys/ApiKeysPage';
 import { ChatPage } from './components/Chat/ChatPage';
 import { ChatInterface } from './components/Chat/ChatInterface';
+import { ChatSidebar } from './components/Chat/ChatSidebar';
 import CodeEditorPage from './components/CodeEditor/CodeEditorPage';
 import { ProjectsList } from './components/Projects/ProjectsList';
 import { ProjectDashboard } from './components/Projects/ProjectDashboard';
@@ -143,6 +144,24 @@ function App() {
                                 isUser={true} 
                                 timestamp={new Date(Date.now() - 120000)} 
                               />
+                            </div>
+                          } 
+                        />
+                        <Route 
+                          path="/chat-sidebar-demo" 
+                          element={
+                            <div className="h-screen flex">
+                              <ChatSidebar 
+                                selectedChatId="1"
+                                onChatSelect={(id) => console.log('Selected chat:', id)}
+                                onNewChat={() => console.log('New chat clicked')}
+                              />
+                              <div className="flex-1 flex items-center justify-center bg-gray-50">
+                                <div className="text-center">
+                                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Chat Sidebar Demo</h2>
+                                  <p className="text-gray-600">Select a chat from the sidebar to view conversation</p>
+                                </div>
+                              </div>
                             </div>
                           } 
                         />
