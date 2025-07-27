@@ -146,7 +146,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         }));
 
       // Call backend API
-      const response = await fetch('/api/generate', {
+      const response = await fetch('http://localhost:8000/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
