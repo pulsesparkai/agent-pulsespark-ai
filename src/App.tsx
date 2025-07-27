@@ -11,7 +11,7 @@ import { SignupForm } from './components/Auth/SignupForm';
 import { Dashboard } from './components/Dashboard/Dashboard';
 import { ApiKeysPage } from './components/ApiKeys/ApiKeysPage';
 import { ChatPage } from './components/Chat/ChatPage';
-import { CodeEditorPage } from './components/CodeEditor/CodeEditorPage';
+import CodeEditorPage from './components/CodeEditor/CodeEditorPage';
 import { PlaceholderPage } from './components/Shared/PlaceholderPage';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
