@@ -24,6 +24,7 @@ import ChatSettingsPanel from './components/Chat/ChatSettingsPanel';
 import UserProfileSettings from './components/User/UserProfileSettings';
 import { AIAnalyticsDashboard } from './components/Dashboard/AIAnalyticsDashboard';
 import { ChatMessageBubble } from './components/Chat/ChatMessageBubble';
+import ChatInputBar from './components/Chat/ChatInputBar';
 import { PlaceholderPage } from './components/Shared/PlaceholderPage';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
@@ -119,6 +120,26 @@ function App() {
                         <Route path="/chat-settings" element={<ChatSettingsPanel />} />
                         <Route path="/profile-settings" element={<UserProfileSettings />} />
                         <Route path="/analytics" element={<AIAnalyticsDashboard />} />
+                        <Route 
+                          path="/chat-input-demo" 
+                          element={
+                            <div className="max-w-2xl mx-auto p-8">
+                              <h2 className="text-2xl font-bold text-gray-900 mb-6">Chat Input Bar Demo</h2>
+                              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="h-64 bg-gray-50 flex items-center justify-center">
+                                  <p className="text-gray-500">Chat messages would appear here</p>
+                                </div>
+                                <ChatInputBar 
+                                  onSendMessage={(message) => {
+                                    console.log('Message sent:', message);
+                                    alert(`Message sent: "${message}"`);
+                                  }}
+                                  placeholder="Try typing a message..."
+                                />
+                              </div>
+                            </div>
+                          } 
+                        />
                         <Route 
                           path="/chat-bubble-demo" 
                           element={
