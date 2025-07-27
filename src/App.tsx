@@ -6,8 +6,6 @@ import { ApiKeysProvider } from './contexts/ApiKeysContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { ProjectProvider } from './contexts/ProjectContext';
 import { GitHubProvider } from './contexts/GitHubContext';
-import { ProjectProvider } from './contexts/ProjectContext';
-import { GitHubProvider } from './contexts/GitHubContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import { SignupForm } from './components/Auth/SignupForm';
 import { Dashboard } from './components/Dashboard/Dashboard';
@@ -15,7 +13,6 @@ import { ApiKeysPage } from './components/ApiKeys/ApiKeysPage';
 import { ChatPage } from './components/Chat/ChatPage';
 import CodeEditorPage from './components/CodeEditor/CodeEditorPage';
 import { ProjectsList } from './components/Projects/ProjectsList';
-import CodeEditorPage from './components/CodeEditor/CodeEditorPage';
 import { PlaceholderPage } from './components/Shared/PlaceholderPage';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
@@ -25,7 +22,7 @@ import { Settings } from 'lucide-react';
 // Auth wrapper component
 const AuthWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -33,18 +30,18 @@ const AuthWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </div>
     );
   }
-  
+
   if (!user) {
     return <AuthPages />;
   }
-  
+
   return <>{children}</>;
 };
 
 // Auth pages component
 const AuthPages: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       {isLogin ? (
@@ -59,20 +56,15 @@ const AuthPages: React.FC = () => {
 // Main app layout with sidebar
 const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar 
-        isOpen={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)} 
-      />
-      
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
+
+        <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
   );
@@ -96,21 +88,16 @@ function App() {
                         <Route path="/editor" element={<CodeEditorPage />} />
                         <Route path="/api-keys" element={<ApiKeysPage />} />
                         <Route path="/projects" element={<ProjectsList />} />
-                        <Route 
-                          path="/settings" 
+                        <Route
+                          path="/settings"
                           element={
                             <PlaceholderPage
                               title="Settings"
                               description="Configure your account and application preferences."
                               icon={<Settings className="w-full h-full" />}
                             />
-                          } 
+                          }
                         />
-                        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                      </Routes>
-                    </AppLayout>
-                  </GitHubProvider>
-                </ProjectProvider>
                         <Route path="*" element={<Navigate to="/dashboard" replace />} />
                       </Routes>
                     </AppLayout>
