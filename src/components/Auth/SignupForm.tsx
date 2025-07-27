@@ -193,7 +193,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onToggleForm }) => {
             {/* Header Section */}
             <div className="text-center mb-8">
               {/* Logo/Brand */}
-              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
                 <span className="text-2xl font-bold text-white">PS</span>
               </div>
               
@@ -232,7 +232,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onToggleForm }) => {
                     className={`
                       block w-full pl-12 pr-4 py-4 text-gray-900 placeholder-gray-500
                       border rounded-xl shadow-sm transition-all duration-200
-                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+                      focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent
                       disabled:opacity-50 disabled:cursor-not-allowed
                       ${errors.email 
                         ? 'border-red-300 bg-red-50 focus:ring-red-500' 
@@ -269,7 +269,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onToggleForm }) => {
                     className={`
                       block w-full pl-12 pr-12 py-4 text-gray-900 placeholder-gray-500
                       border rounded-xl shadow-sm transition-all duration-200
-                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+                      focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent
                       disabled:opacity-50 disabled:cursor-not-allowed
                       ${errors.password 
                         ? 'border-red-300 bg-red-50 focus:ring-red-500' 
@@ -335,7 +335,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onToggleForm }) => {
                     className={`
                       block w-full pl-12 pr-12 py-4 text-gray-900 placeholder-gray-500
                       border rounded-xl shadow-sm transition-all duration-200
-                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+                      focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent
                       disabled:opacity-50 disabled:cursor-not-allowed
                       ${errors.confirmPassword 
                         ? 'border-red-300 bg-red-50 focus:ring-red-500' 
@@ -381,12 +381,12 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onToggleForm }) => {
                 disabled={isSubmitting}
                 className="
                   w-full flex justify-center items-center gap-3 py-4 px-6
-                  bg-gradient-to-r from-indigo-600 to-purple-600 
-                  hover:from-indigo-700 hover:to-purple-700
+                  bg-gradient-to-r from-green-600 to-green-700 
+                  hover:from-green-500 hover:to-green-600
                   text-white font-semibold rounded-xl shadow-lg
                   transform transition-all duration-200 
                   hover:scale-[1.02] hover:shadow-xl
-                  focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2
+                  focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2
                   disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
                   active:scale-[0.98]
                 "
@@ -409,7 +409,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onToggleForm }) => {
                 <button
                   onClick={onToggleForm}
                   className="
-                    font-semibold text-indigo-600 hover:text-indigo-700 
+                    font-semibold text-green-600 hover:text-green-700 
                     hover:underline transition-all duration-200
                     focus:outline-none focus:underline
                     disabled:opacity-50 disabled:cursor-not-allowed
@@ -425,17 +425,17 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onToggleForm }) => {
             <div className="mt-6 text-center">
               <p className="text-xs text-gray-500">
                 By creating an account, you agree to our{' '}
-                <a href="#" className="text-indigo-600 hover:underline">Terms of Service</a>
+                <a href="#" className="text-green-600 hover:underline">Terms of Service</a>
                 {' '}and{' '}
-                <a href="#" className="text-indigo-600 hover:underline">Privacy Policy</a>
+                <a href="#" className="text-green-600 hover:underline">Privacy Policy</a>
               </p>
             </div>
           </div>
         </div>
 
         {/* Decorative elements */}
-        <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full opacity-20 blur-xl" />
-        <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full opacity-20 blur-xl" />
+        <div className="absolute -top-4 -left-4 w-24 h-24 bg-gradient-to-br from-green-400 to-green-500 rounded-full opacity-20 blur-xl" />
+        <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-gradient-to-br from-green-400 to-green-500 rounded-full opacity-20 blur-xl" />
       </div>
     </div>
   );
