@@ -4,7 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 /**
  * LoginPage Component
  * 
- * A sleek dark-themed login form for agent.pulsespark.ai
+ * A sleek light-themed login form for agent.pulsespark.ai
  * Features full viewport layout, form validation, and accessibility
  */
 const LoginPage: React.FC = () => {
@@ -59,26 +59,26 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    // Main container - Full viewport height with dark background
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
+    // Main container - Full viewport height with light gradient background
+    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-green-50 flex items-center justify-center px-4">
       
       {/* Login Card Container */}
-      <div className="bg-gray-800 rounded-xl shadow-xl p-10 max-w-md w-full">
+      <div className="bg-white rounded-xl shadow-lg p-10 max-w-md w-full">
         
         {/* Header Section */}
         <div className="text-center mb-8">
           {/* Logo Placeholder */}
-          <div className="rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-6 bg-purple-600">
+          <div className="rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-6 bg-green-600">
             <span className="text-white font-bold text-lg">PS</span>
           </div>
           
           {/* Main Heading */}
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Welcome Back
           </h1>
           
           {/* Subtitle */}
-          <p className="text-gray-400">
+          <p className="text-gray-600">
             Sign in to your account
           </p>
         </div>
@@ -97,12 +97,12 @@ const LoginPage: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={`
-                w-full p-3 rounded-md bg-gray-700 text-white placeholder-gray-400
+                w-full p-3 rounded-md bg-gray-100 text-gray-900 placeholder-gray-400
                 border transition duration-200
-                focus:outline-none focus:ring-2 focus:ring-indigo-600
+                focus:outline-none focus:ring-2 focus:ring-green-500
                 ${errors.email 
-                  ? 'border-red-500' 
-                  : 'border-gray-600 focus:border-indigo-600'
+                  ? 'border-red-600' 
+                  : 'border-gray-300 focus:border-green-500'
                 }
               `}
               placeholder="Enter your email address"
@@ -110,7 +110,7 @@ const LoginPage: React.FC = () => {
             />
             {/* Email Validation Error */}
             {errors.email && (
-              <p className="text-red-500 text-sm mt-2">
+              <p className="text-red-600 text-sm mt-2 mb-3">
                 {errors.email}
               </p>
             )}
@@ -128,12 +128,12 @@ const LoginPage: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={`
-                  w-full p-3 pr-12 rounded-md bg-gray-700 text-white placeholder-gray-400
+                  w-full p-3 pr-12 rounded-md bg-gray-100 text-gray-900 placeholder-gray-400
                   border transition duration-200
-                  focus:outline-none focus:ring-2 focus:ring-indigo-600
+                  focus:outline-none focus:ring-2 focus:ring-green-500
                   ${errors.password 
-                    ? 'border-red-500' 
-                    : 'border-gray-600 focus:border-indigo-600'
+                    ? 'border-red-600' 
+                    : 'border-gray-300 focus:border-green-500'
                   }
                 `}
                 placeholder="Enter your password"
@@ -144,7 +144,7 @@ const LoginPage: React.FC = () => {
               <button
                 type="button"
                 onClick={togglePasswordVisibility}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition duration-200"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition duration-200"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
@@ -157,7 +157,7 @@ const LoginPage: React.FC = () => {
             
             {/* Password Validation Error */}
             {errors.password && (
-              <p className="text-red-500 text-sm mt-2">
+              <p className="text-red-600 text-sm mt-2 mb-3">
                 {errors.password}
               </p>
             )}
@@ -167,11 +167,11 @@ const LoginPage: React.FC = () => {
           <button
             type="submit"
             className="
-              w-full bg-gradient-to-r from-indigo-900 to-purple-900 
-              hover:from-indigo-700 hover:to-purple-700
-              text-white font-semibold py-3 rounded-md
+              w-full bg-gradient-to-r from-green-600 to-green-700 
+              hover:from-green-500 hover:to-green-600
+              text-white font-bold py-3 rounded-md
               transition duration-200
-              focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 focus:ring-offset-gray-800
+              focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2
             "
           >
             Sign In
@@ -179,10 +179,10 @@ const LoginPage: React.FC = () => {
         </form>
 
         {/* Footer Links */}
-        <div className="text-gray-400 text-center mt-6">
+        <div className="text-center mt-6 text-gray-600">
           <p>
             Don't have an account?{' '}
-            <span className="text-purple-500 hover:underline cursor-pointer">
+            <span className="text-green-600 hover:underline cursor-pointer">
               Sign up
             </span>
           </p>

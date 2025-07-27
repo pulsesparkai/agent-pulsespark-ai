@@ -46,7 +46,7 @@ const AuthPages: React.FC = () => {
   return (
     <>
       {isLogin ? (
-        <LoginPage />
+        <LoginForm onToggleForm={() => setIsLogin(false)} />
       ) : (
         <SignupForm onToggleForm={() => setIsLogin(true)} />
       )}
