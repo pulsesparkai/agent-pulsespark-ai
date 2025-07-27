@@ -4,14 +4,12 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ApiKeysProvider } from './contexts/ApiKeysContext';
 import { ChatProvider } from './contexts/ChatContext';
-import { ChatProvider } from './contexts/ChatContext';
 import { ProjectProvider } from './contexts/ProjectContext';
 import { GitHubProvider } from './contexts/GitHubContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import { SignupForm } from './components/Auth/SignupForm';
 import { Dashboard } from './components/Dashboard/Dashboard';
 import { ApiKeysPage } from './components/ApiKeys/ApiKeysPage';
-import { ChatPage } from './components/Chat/ChatPage';
 import { ChatPage } from './components/Chat/ChatPage';
 import CodeEditorPage from './components/CodeEditor/CodeEditorPage';
 import { ProjectsList } from './components/Projects/ProjectsList';
@@ -103,9 +101,6 @@ function App() {
                         <Route path="*" element={<Navigate to="/dashboard" replace />} />
                       </Routes>
                     </AppLayout>
-                  </GitHubProvider>
-                </ProjectProvider>
-              </ChatProvider>
                   </GitHubProvider>
                 </ProjectProvider>
               </ChatProvider>
