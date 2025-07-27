@@ -25,6 +25,7 @@ import { AIAnalyticsDashboard } from './components/Dashboard/AIAnalyticsDashboar
 import { PlaceholderPage } from './components/Shared/PlaceholderPage';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
+import { AppHeader } from './components/Layout/AppHeader';
 import { LoadingSpinner } from './components/Shared/LoadingSpinner';
 import { Settings } from 'lucide-react';
 
@@ -67,15 +68,17 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <>
+      <AppHeader onMenuClick={() => setSidebarOpen(true)} />
+      
+      <div className="flex min-h-screen bg-gray-50 pt-16">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
-
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
+          <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
