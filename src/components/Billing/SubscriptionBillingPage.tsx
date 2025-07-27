@@ -1,21 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  CreditCard, 
-  Calendar, 
-  TrendingUp, 
-  Download, 
-  CheckCircle, 
-  AlertCircle, 
-  Save, 
-  Upgrade,
-  Eye,
-  EyeOff,
-  MapPin,
-  User,
-  Mail,
-  Phone,
-  Building
-} from 'lucide-react';
+import { CreditCard, Calendar, TrendingUp, Download, CheckCircle, AlertCircle, Save, Spade as Upgrade, Eye, EyeOff, MapPin, User, Mail, Phone, Building } from 'lucide-react';
 import { LoadingSpinner } from '../Shared/LoadingSpinner';
 import { useNotification } from '../../contexts/NotificationContext';
 
