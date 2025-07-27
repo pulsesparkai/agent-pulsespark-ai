@@ -36,6 +36,7 @@ import UserNotificationsPanel from './components/User/UserNotificationsPanel';
 import { ActivityFeed } from './components/User/ActivityFeed';
 import SubscriptionBillingPage from './components/Billing/SubscriptionBillingPage';
 import PaymentMethodForm from './components/Billing/PaymentMethodForm';
+import { SupportFAQPage } from './components/Support/SupportFAQPage';
 import { Settings } from 'lucide-react';
 
 // Auth wrapper component
@@ -265,6 +266,14 @@ function App() {
                                   alert('Payment form cancelled');
                                 }}
                               />
+                            </div>
+                          } 
+                        />
+                        <Route 
+                          path="/support" 
+                          element={
+                            <div className="max-w-6xl mx-auto">
+                              <SupportFAQPage />
                             </div>
                           } 
                         />
