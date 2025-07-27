@@ -16,6 +16,7 @@ import { ChatPage } from './components/Chat/ChatPage';
 import { ChatInterface } from './components/Chat/ChatInterface';
 import CodeEditorPage from './components/CodeEditor/CodeEditorPage';
 import { ProjectsList } from './components/Projects/ProjectsList';
+import { ProjectDashboard } from './components/Projects/ProjectDashboard';
 import { PlaceholderPage } from './components/Shared/PlaceholderPage';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
@@ -93,6 +94,7 @@ function App() {
                         <Route path="/signup" element={<SignupPage />} />
                         <Route path="/api-keys" element={<ApiKeysPage />} />
                         <Route path="/projects" element={<ProjectsList />} />
+                        <Route path="/project-dashboard" element={<ProjectDashboard />} />
                         <Route
                           path="/settings"
                           element={
