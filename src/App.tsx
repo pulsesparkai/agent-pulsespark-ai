@@ -34,6 +34,7 @@ import { SidebarNavigation } from './components/Layout/SidebarNavigation';
 import { LoadingSpinner } from './components/Shared/LoadingSpinner';
 import UserNotificationsPanel from './components/User/UserNotificationsPanel';
 import { ActivityFeed } from './components/User/ActivityFeed';
+import SubscriptionBillingPage from './components/Billing/SubscriptionBillingPage';
 import { Settings } from 'lucide-react';
 
 // Auth wrapper component
@@ -236,6 +237,14 @@ function App() {
                                   />
                                 </div>
                               </div>
+                            </div>
+                          } 
+                        />
+                        <Route 
+                          path="/billing" 
+                          element={
+                            <div className="max-w-6xl mx-auto">
+                              <SubscriptionBillingPage />
                             </div>
                           } 
                         />
