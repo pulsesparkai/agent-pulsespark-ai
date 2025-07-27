@@ -32,6 +32,7 @@ import { Header } from './components/Layout/Header';
 import { AppHeader } from './components/Layout/AppHeader';
 import { SidebarNavigation } from './components/Layout/SidebarNavigation';
 import { LoadingSpinner } from './components/Shared/LoadingSpinner';
+import UserNotificationsPanel from './components/User/UserNotificationsPanel';
 import { Settings } from 'lucide-react';
 
 // Auth wrapper component
