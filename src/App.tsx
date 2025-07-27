@@ -26,6 +26,7 @@ import { PlaceholderPage } from './components/Shared/PlaceholderPage';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
 import { AppHeader } from './components/Layout/AppHeader';
+import { SidebarNavigation } from './components/Layout/SidebarNavigation';
 import { LoadingSpinner } from './components/Shared/LoadingSpinner';
 import { Settings } from 'lucide-react';
 
@@ -72,9 +73,9 @@ const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <AppHeader onMenuClick={() => setSidebarOpen(true)} />
       
       <div className="flex min-h-screen bg-gray-50 pt-16">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <SidebarNavigation isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-        <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
+        <div className="flex-1 flex flex-col overflow-hidden lg:ml-72">
           <main className="flex-1 overflow-y-auto p-6">{children}</main>
         </div>
       </div>
