@@ -22,6 +22,7 @@ import ProjectSettingsPanel from './components/Projects/ProjectSettingsPanel';
 import ChatSettingsPanel from './components/Chat/ChatSettingsPanel';
 import UserProfileSettings from './components/User/UserProfileSettings';
 import { AIAnalyticsDashboard } from './components/Dashboard/AIAnalyticsDashboard';
+import { ChatMessageBubble } from './components/Chat/ChatMessageBubble';
 import { PlaceholderPage } from './components/Shared/PlaceholderPage';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
@@ -109,6 +110,34 @@ function App() {
                         <Route path="/chat-settings" element={<ChatSettingsPanel />} />
                         <Route path="/profile-settings" element={<UserProfileSettings />} />
                         <Route path="/analytics" element={<AIAnalyticsDashboard />} />
+                        <Route 
+                          path="/chat-bubble-demo" 
+                          element={
+                            <div className="max-w-2xl mx-auto p-8 space-y-4">
+                              <h2 className="text-2xl font-bold text-gray-900 mb-6">Chat Message Bubble Demo</h2>
+                              <ChatMessageBubble 
+                                message="Hello! How can I help you today?" 
+                                isUser={false} 
+                                timestamp={new Date(Date.now() - 300000)} 
+                              />
+                              <ChatMessageBubble 
+                                message="I need help with my React project. Can you explain how to use hooks?" 
+                                isUser={true} 
+                                timestamp={new Date(Date.now() - 240000)} 
+                              />
+                              <ChatMessageBubble 
+                                message="I'd be happy to help! React hooks are functions that let you use state and other React features in functional components. The most common hooks are useState for managing state and useEffect for side effects." 
+                                isUser={false} 
+                                timestamp={new Date(Date.now() - 180000)} 
+                              />
+                              <ChatMessageBubble 
+                                message="That's really helpful, thank you!" 
+                                isUser={true} 
+                                timestamp={new Date(Date.now() - 120000)} 
+                              />
+                            </div>
+                          } 
+                        />
                         <Route
                           path="/settings"
                           element={
