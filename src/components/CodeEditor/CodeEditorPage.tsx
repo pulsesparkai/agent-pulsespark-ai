@@ -1,31 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import Editor from '@monaco-editor/react';
-import { 
-  ChevronRight, 
-  ChevronDown, 
-  File, 
-  Folder, 
-  FolderOpen,
-  FileText,
-  Code,
-  Database,
-  Image,
-  Settings
-} from 'lucide-react';
+import { FileExplorer, FileNode } from '../FileExplorer';
+import { File } from 'lucide-react';
 
-// Type definitions for our file system
-interface FileNode {
+// Extended FileNode with additional properties for the editor
+interface EditorFileNode extends FileNode {
   id: string;
-  name: string;
-  type: 'file' | 'folder';
   content?: string;
-  children?: FileNode[];
   language?: string;
 }
 
 // Sample file structure with realistic content
-const initialFiles: FileNode[] = [
+const initialFiles: EditorFileNode[] = [
   {
     id: '1',
     name: 'src',
@@ -212,163 +199,11 @@ Happy coding! 🚀`
 ];
 
 /**
- * FileExplorer Component
- * Renders a collapsible tree view of files and folders
- */
-interface FileExplorerProps {
-  files: FileNode[];
-  activeFileId: string | null;
-  onFileSelect: (file: FileNode) => void;
-  expandedFolders: Set<string>;
-  onToggleFolder: (folderId: string) => void;
-}
-
-const FileExplorer: React.FC<FileExplorerProps> = ({
-  files,
-  activeFileId,
-  onFileSelect,
-  expandedFolders,
-  onToggleFolder
-}) => {
-  // Get appropriate icon for file type
-  const getFileIcon = (file: FileNode) => {
-    if (file.type === 'folder') {
-      return expandedFolders.has(file.id) ? (
-        <FolderOpen className="w-4 h-4 text-blue-500" />
-      ) : (
-        <Folder className="w-4 h-4 text-blue-500" />
-      );
-    }
-
-    // File type icons based on extension
-    const extension = file.name.split('.').pop()?.toLowerCase();
-    switch (extension) {
-      case 'tsx':
-      case 'jsx':
-      case 'ts':
-      case 'js':
-        return <Code className="w-4 h-4 text-yellow-500" />;
-      case 'json':
-        return <Database className="w-4 h-4 text-green-500" />;
-      case 'md':
-        return <FileText className="w-4 h-4 text-blue-500" />;
-      case 'png':
-      case 'jpg':
-      case 'jpeg':
-      case 'gif':
-      case 'svg':
-        return <Image className="w-4 h-4 text-purple-500" />;
-      case 'css':
-      case 'scss':
-        return <Settings className="w-4 h-4 text-pink-500" />;
-      default:
-        return <File className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
-  // Recursive component to render file tree
-  const renderFileNode = (file: FileNode, depth: number = 0) => {
-    const isExpanded = expandedFolders.has(file.id);
-    const isActive = activeFileId === file.id;
-
-    return (
-      <div key={file.id}>
-        <div
-          className={`
-            flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-gray-100 
-            transition-colors duration-150 group
-            ${isActive ? 'bg-blue-50 border-r-2 border-blue-500' : ''}
-          `}
-          style={{ paddingLeft: `${depth * 16 + 8}px` }}
-          onClick={() => {
-            if (file.type === 'folder') {
-              onToggleFolder(file.id);
-            } else {
-              onFileSelect(file);
-            }
-          }}
-          role={file.type === 'folder' ? 'treeitem' : 'option'}
-          aria-expanded={file.type === 'folder' ? isExpanded : undefined}
-          aria-selected={isActive}
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              if (file.type === 'folder') {
-                onToggleFolder(file.id);
-              } else {
-                onFileSelect(file);
-              }
-            }
-          }}
-        >
-          {/* Folder expand/collapse chevron */}
-          {file.type === 'folder' && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleFolder(file.id);
-              }}
-              className="p-0.5 hover:bg-gray-200 rounded transition-colors"
-              aria-label={isExpanded ? 'Collapse folder' : 'Expand folder'}
-            >
-              {isExpanded ? (
-                <ChevronDown className="w-3 h-3 text-gray-500" />
-              ) : (
-                <ChevronRight className="w-3 h-3 text-gray-500" />
-              )}
-            </button>
-          )}
-          
-          {/* File/folder icon */}
-          {getFileIcon(file)}
-          
-          {/* File/folder name */}
-          <span 
-            className={`
-              text-sm truncate flex-1
-              ${isActive ? 'font-medium text-blue-700' : 'text-gray-700'}
-            `}
-          >
-            {file.name}
-          </span>
-        </div>
-
-        {/* Render children if folder is expanded */}
-        {file.type === 'folder' && isExpanded && file.children && (
-          <div role="group">
-            {file.children.map(child => renderFileNode(child, depth + 1))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <div 
-      className="h-full bg-gray-50 border-r border-gray-200 overflow-y-auto"
-      role="tree"
-      aria-label="File explorer"
-    >
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 bg-gray-100">
-        <h3 className="text-sm font-semibold text-gray-700">Explorer</h3>
-      </div>
-      
-      {/* File tree */}
-      <div className="py-2">
-        {files.map(file => renderFileNode(file))}
-      </div>
-    </div>
-  );
-};
-
-/**
  * MonacoEditor Component
  * Wraps the Monaco Editor with auto-save functionality
  */
 interface MonacoEditorProps {
-  activeFile: FileNode | null;
+  activeFile: EditorFileNode | null;
   onContentChange: (fileId: string, content: string) => void;
 }
 
@@ -476,22 +311,21 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({ activeFile, onContentChange
  */
 export const CodeEditorPage: React.FC = () => {
   // State management for files and UI
-  const [files, setFiles] = useState<FileNode[]>(initialFiles);
-  const [activeFile, setActiveFile] = useState<FileNode | null>(null);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set(['1']) // Initially expand the 'src' folder
-  );
+  const [files, setFiles] = useState<EditorFileNode[]>(initialFiles);
+  const [activeFile, setActiveFile] = useState<EditorFileNode | null>(null);
+  const [selectedFilePath, setSelectedFilePath] = useState<string>('');
 
   // Initialize with the first file selected
   useEffect(() => {
     const firstFile = findFirstFile(initialFiles);
     if (firstFile) {
       setActiveFile(firstFile);
+      setSelectedFilePath(getFilePath(firstFile, initialFiles));
     }
   }, []);
 
   // Helper function to find the first file in the tree
-  const findFirstFile = (nodes: FileNode[]): FileNode | null => {
+  const findFirstFile = (nodes: EditorFileNode[]): EditorFileNode | null => {
     for (const node of nodes) {
       if (node.type === 'file') {
         return node;
@@ -505,7 +339,7 @@ export const CodeEditorPage: React.FC = () => {
   };
 
   // Helper function to find a file by ID in the tree
-  const findFileById = (nodes: FileNode[], id: string): FileNode | null => {
+  const findFileById = (nodes: EditorFileNode[], id: string): EditorFileNode | null => {
     for (const node of nodes) {
       if (node.id === id) {
         return node;
@@ -518,8 +352,38 @@ export const CodeEditorPage: React.FC = () => {
     return null;
   };
 
+  // Helper function to find a file by path
+  const findFileByPath = (path: string, nodes: EditorFileNode[], currentPath = ''): EditorFileNode | null => {
+    for (const node of nodes) {
+      const nodePath = currentPath ? `${currentPath}/${node.name}` : node.name;
+      if (nodePath === path) {
+        return node;
+      }
+      if (node.children) {
+        const found = findFileByPath(path, node.children, nodePath);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  // Helper function to get file path
+  const getFilePath = (file: EditorFileNode, nodes: EditorFileNode[], currentPath = ''): string => {
+    for (const node of nodes) {
+      const nodePath = currentPath ? `${currentPath}/${node.name}` : node.name;
+      if (node.id === file.id) {
+        return nodePath;
+      }
+      if (node.children) {
+        const found = getFilePath(file, node.children, nodePath);
+        if (found) return found;
+      }
+    }
+    return '';
+  };
+
   // Helper function to update a file's content in the tree
-  const updateFileContent = (nodes: FileNode[], fileId: string, content: string): FileNode[] => {
+  const updateFileContent = (nodes: EditorFileNode[], fileId: string, content: string): EditorFileNode[] => {
     return nodes.map(node => {
       if (node.id === fileId) {
         return { ...node, content };
@@ -532,21 +396,12 @@ export const CodeEditorPage: React.FC = () => {
   };
 
   // Handle file selection
-  const handleFileSelect = useCallback((file: FileNode) => {
-    setActiveFile(file);
-  }, []);
-
-  // Handle folder expand/collapse
-  const handleToggleFolder = useCallback((folderId: string) => {
-    setExpandedFolders(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(folderId)) {
-        newSet.delete(folderId);
-      } else {
-        newSet.add(folderId);
-      }
-      return newSet;
-    });
+  const handleFileSelect = useCallback((filePath: string) => {
+    const file = findFileByPath(filePath, files);
+    if (file && file.type === 'file') {
+      setActiveFile(file);
+      setSelectedFilePath(filePath);
+    }
   }, []);
 
   // Handle content changes with auto-save
@@ -562,29 +417,14 @@ export const CodeEditorPage: React.FC = () => {
     console.log(`Auto-saving file ${fileId} with ${content.length} characters`);
   }, [activeFile]);
 
-  // Keyboard navigation for file explorer
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle if focus is in the file explorer area
-      if (!document.activeElement?.closest('[role="tree"]')) return;
-
-      switch (e.key) {
-        case 'ArrowUp':
-        case 'ArrowDown':
-          e.preventDefault();
-          // Implementation for arrow key navigation would go here
-          break;
-        case 'Enter':
-        case ' ':
-          e.preventDefault();
-          // Handle selection
-          break;
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  // Convert EditorFileNode to FileNode for the FileExplorer
+  const convertToFileNodes = (nodes: EditorFileNode[]): FileNode[] => {
+    return nodes.map(node => ({
+      name: node.name,
+      type: node.type,
+      children: node.children ? convertToFileNodes(node.children) : undefined
+    }));
+  };
 
   return (
     <div className="h-screen bg-white">
@@ -606,11 +446,9 @@ export const CodeEditorPage: React.FC = () => {
             className="min-w-0"
           >
             <FileExplorer
-              files={files}
-              activeFileId={activeFile?.id || null}
+              files={convertToFileNodes(files)}
+              selectedFile={selectedFilePath}
               onFileSelect={handleFileSelect}
-              expandedFolders={expandedFolders}
-              onToggleFolder={handleToggleFolder}
             />
           </Panel>
 
