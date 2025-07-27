@@ -13,6 +13,7 @@ import { SignupForm } from './components/Auth/SignupForm';
 import { Dashboard } from './components/Dashboard/Dashboard';
 import { ApiKeysPage } from './components/ApiKeys/ApiKeysPage';
 import { ChatPage } from './components/Chat/ChatPage';
+import { ChatInterface } from './components/Chat/ChatInterface';
 import CodeEditorPage from './components/CodeEditor/CodeEditorPage';
 import { ProjectsList } from './components/Projects/ProjectsList';
 import { PlaceholderPage } from './components/Shared/PlaceholderPage';
@@ -87,6 +88,7 @@ function App() {
                         <Route path="/" element={<Navigate to="/dashboard" replace />} />
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/chat" element={<ChatPage />} />
+                        <Route path="/chat-interface" element={<ChatInterface />} />
                         <Route path="/editor" element={<CodeEditorPage />} />
                         <Route path="/signup" element={<SignupPage />} />
                         <Route path="/api-keys" element={<ApiKeysPage />} />
