@@ -19,11 +19,6 @@ export const PlaceholderPage: React.FC<PlaceholderPageProps> = ({
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-4">{title}</h1>
         <p className="text-lg text-gray-600 mb-8">{description}</p>
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 max-w-md mx-auto">
-          <p className="text-amber-800 text-sm">
-            This page is coming soon! We're working hard to bring you this feature.
-          </p>
-        </div>
       </div>
     </div>
   );

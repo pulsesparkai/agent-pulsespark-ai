@@ -6,17 +6,21 @@ import { ApiKeysProvider } from './contexts/ApiKeysContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { ProjectProvider } from './contexts/ProjectContext';
 import { GitHubProvider } from './contexts/GitHubContext';
+import { ProjectProvider } from './contexts/ProjectContext';
+import { GitHubProvider } from './contexts/GitHubContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import { SignupForm } from './components/Auth/SignupForm';
 import { Dashboard } from './components/Dashboard/Dashboard';
 import { ApiKeysPage } from './components/ApiKeys/ApiKeysPage';
 import { ChatPage } from './components/Chat/ChatPage';
 import CodeEditorPage from './components/CodeEditor/CodeEditorPage';
+import { ProjectsList } from './components/Projects/ProjectsList';
+import CodeEditorPage from './components/CodeEditor/CodeEditorPage';
 import { PlaceholderPage } from './components/Shared/PlaceholderPage';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
 import { LoadingSpinner } from './components/Shared/LoadingSpinner';
-import { FolderOpen, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 
 // Auth wrapper component
 const AuthWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -91,16 +95,7 @@ function App() {
                         <Route path="/chat" element={<ChatPage />} />
                         <Route path="/editor" element={<CodeEditorPage />} />
                         <Route path="/api-keys" element={<ApiKeysPage />} />
-                        <Route 
-                          path="/projects" 
-                          element={
-                            <PlaceholderPage
-                              title="Projects"
-                              description="Manage your projects and integrations here."
-                              icon={<FolderOpen className="w-full h-full" />}
-                            />
-                          } 
-                        />
+                        <Route path="/projects" element={<ProjectsList />} />
                         <Route 
                           path="/settings" 
                           element={
@@ -111,6 +106,11 @@ function App() {
                             />
                           } 
                         />
+                        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                      </Routes>
+                    </AppLayout>
+                  </GitHubProvider>
+                </ProjectProvider>
                         <Route path="*" element={<Navigate to="/dashboard" replace />} />
                       </Routes>
                     </AppLayout>

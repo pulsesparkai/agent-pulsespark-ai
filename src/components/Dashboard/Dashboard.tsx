@@ -1,10 +1,12 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useProject } from '../../contexts/ProjectContext';
 import { useApiKeys } from '../../contexts/ApiKeysContext';
-import { Key, FolderOpen, Shield, TrendingUp } from 'lucide-react';
+import { Key, FolderOpen, Shield, TrendingUp, Plus } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const { projects, createProject, loadProject, loading: projectsLoading } = useProject();
   const { apiKeys } = useApiKeys();
 
   const stats = [
@@ -18,8 +20,8 @@ export const Dashboard: React.FC = () => {
     },
     {
       icon: FolderOpen,
-      label: 'Projects',
-      value: 0,
+      label: 'Projects', 
+      value: projects.length,
       color: 'bg-emerald-500',
       bgColor: 'bg-emerald-50',
       textColor: 'text-emerald-700'
@@ -78,6 +80,18 @@ export const Dashboard: React.FC = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <button
+            onClick={() => createProject(`Project ${projects.length + 1}`, 'A new project created with PulseSpark AI')}
+            disabled={projectsLoading}
+            className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-left"
+          >
+            <Plus className="w-5 h-5 text-green-600" />
+            <div>
+              <h3 className="font-medium text-gray-900">Create Project</h3>
+              <p className="text-sm text-gray-600">Start a new coding project</p>
+            </div>
+          </button>
+          
           <a
             href="/api-keys"
             className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -113,26 +127,30 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Recent Activity */}
-      {apiKeys.length > 0 && (
+      {/* Recent Projects */}
+      {projects.length > 0 && (
         <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent API Keys</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Projects</h2>
           <div className="space-y-3">
-            {apiKeys.slice(0, 3).map((apiKey) => (
-              <div key={apiKey.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            {projects.slice(0, 3).map((project) => (
+              <button
+                key={project.id}
+                onClick={() => loadProject(project.id)}
+                className="flex items-center justify-between w-full p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors text-left"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Key className="w-4 h-4 text-blue-600" />
+                  <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <FolderOpen className="w-4 h-4 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">{apiKey.provider}</p>
-                    <p className="text-sm text-gray-600">{apiKey.key_preview}</p>
+                    <p className="font-medium text-gray-900">{project.name}</p>
+                    <p className="text-sm text-gray-600">{project.description || 'No description'}</p>
                   </div>
                 </div>
                 <div className="text-sm text-gray-500">
-                  {new Date(apiKey.created_at).toLocaleDateString()}
+                  {new Date(project.updated_at).toLocaleDateString()}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>

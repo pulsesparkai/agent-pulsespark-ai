@@ -39,6 +39,10 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     }
   }, [user]);
 
+  /**
+   * Load all projects for the current user from Supabase
+   * Called on component mount and after project operations
+   */
   const loadUserProjects = async () => {
     if (!user) return;
 
@@ -65,6 +69,11 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     }
   };
 
+  /**
+   * Create a new project with default file structure
+   * @param name - Project name
+   * @param description - Optional project description
+   */
   const createProject = async (name: string, description?: string) => {
     if (!user) return;
 
@@ -124,6 +133,10 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     }
   };
 
+  /**
+   * Load a specific project by ID
+   * @param projectId - UUID of the project to load
+   */
   const loadProject = async (projectId: string) => {
     setLoading(true);
     try {
@@ -144,6 +157,10 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     }
   };
 
+  /**
+   * Save current project to Supabase
+   * Called automatically after file operations with debounce
+   */
   const saveProject = async () => {
     if (!currentProject) return;
 
@@ -163,6 +180,10 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     }
   };
 
+  /**
+   * Debounced save function to prevent excessive API calls
+   * Saves project 1 second after the last change
+   */
   const debouncedSave = () => {
     if (saveTimer) {
       clearTimeout(saveTimer);
@@ -175,6 +196,10 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     setSaveTimer(timer);
   };
 
+  /**
+   * Delete a project with confirmation
+   * @param projectId - UUID of the project to delete
+   */
   const deleteProject = async (projectId: string) => {
     try {
       const { error } = await supabase
@@ -195,6 +220,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     }
   };
 
+  // Helper function to find a file by ID in the tree
   const findFileById = (files: FileNode[], id: string): FileNode | null => {
     for (const file of files) {
       if (file.id === id) return file;
@@ -206,6 +232,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     return null;
   };
 
+  // Helper function to update a file in the tree
   const updateFileInTree = (files: FileNode[], fileId: string, updates: Partial<FileNode>): FileNode[] => {
     return files.map(file => {
       if (file.id === fileId) {
@@ -218,6 +245,12 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     });
   };
 
+  /**
+   * Create a new file or folder
+   * @param parentId - ID of parent folder (null for root)
+   * @param name - Name of the new file/folder
+   * @param type - 'file' or 'folder'
+   */
   const createFile = async (parentId: string | null, name: string, type: 'file' | 'folder') => {
     if (!currentProject) return;
 
@@ -250,10 +283,19 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     showNotification(`${type === 'file' ? 'File' : 'Folder'} created successfully`, 'success');
   };
 
+  /**
+   * Select a file for editing
+   * @param file - FileNode to select
+   */
   const selectFile = (file: FileNode) => {
     setSelectedFile(file);
   };
 
+  /**
+   * Update file content with auto-save
+   * @param fileId - ID of the file to update
+   * @param content - New file content
+   */
   const updateFileContent = async (fileId: string, content: string) => {
     if (!currentProject) return;
 
@@ -268,6 +310,11 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     debouncedSave();
   };
 
+  /**
+   * Rename a file or folder
+   * @param fileId - ID of the file to rename
+   * @param newName - New name for the file
+   */
   const renameFile = async (fileId: string, newName: string) => {
     if (!currentProject) return;
 
@@ -291,6 +338,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     showNotification('File renamed successfully', 'success');
   };
 
+  // Helper function to remove a file from the tree
   const removeFileFromTree = (files: FileNode[], fileId: string): FileNode[] => {
     return files.filter(file => {
       if (file.id === fileId) return false;
@@ -301,6 +349,10 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     });
   };
 
+  /**
+   * Delete a file or folder
+   * @param fileId - ID of the file to delete
+   */
   const deleteFile = async (fileId: string) => {
     if (!currentProject) return;
 
@@ -315,11 +367,21 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
     showNotification('File deleted successfully', 'success');
   };
 
+  /**
+   * Push project to GitHub (placeholder for GitHub integration)
+   * @param repoName - Name of the GitHub repository
+   * @param isNewRepo - Whether to create a new repository
+   */
   const pushToGitHub = async (repoName: string, isNewRepo: boolean) => {
     // This will be implemented with GitHub integration
     showNotification('GitHub integration coming soon!', 'info');
   };
 
+  /**
+   * Get programming language from file extension
+   * @param filename - Name of the file
+   * @returns Language identifier for syntax highlighting
+   */
   const getLanguageFromExtension = (filename: string): string => {
     const ext = filename.split('.').pop()?.toLowerCase();
     const languageMap: Record<string, string> = {
