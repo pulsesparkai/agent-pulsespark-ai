@@ -18,6 +18,7 @@ import CodeEditorPage from './components/CodeEditor/CodeEditorPage';
 import { ProjectsList } from './components/Projects/ProjectsList';
 import { ProjectDashboard } from './components/Projects/ProjectDashboard';
 import { ProjectFileExplorer } from './components/Projects/ProjectFileExplorer';
+import ProjectSettingsPanel from './components/Projects/ProjectSettingsPanel';
 import { PlaceholderPage } from './components/Shared/PlaceholderPage';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
@@ -97,6 +98,7 @@ function App() {
                         <Route path="/projects" element={<ProjectsList />} />
                         <Route path="/project-dashboard" element={<ProjectDashboard />} />
                         <Route path="/file-explorer" element={<ProjectFileExplorer />} />
+                        <Route path="/project-settings" element={<ProjectSettingsPanel />} />
                         <Route
                           path="/settings"
                           element={
