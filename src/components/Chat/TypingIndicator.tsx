@@ -1,6 +1,12 @@
 import React from 'react';
 import { Bot } from 'lucide-react';
 
+/**
+ * TypingIndicator Component
+ * 
+ * Shows an animated typing indicator when the AI is generating a response.
+ * Features bouncing dots animation and consistent styling with chat messages.
+ */
 export const TypingIndicator: React.FC = () => {
   return (
     <div className="flex gap-3 mb-6">

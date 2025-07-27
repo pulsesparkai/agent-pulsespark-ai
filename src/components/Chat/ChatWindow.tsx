@@ -4,6 +4,12 @@ import { TypingIndicator } from './TypingIndicator';
 import { useChat } from '../../contexts/ChatContext';
 import { MessageSquare, Trash2 } from 'lucide-react';
 
+/**
+ * ChatWindow Component
+ * 
+ * Displays the main chat interface with message history, typing indicators,
+ * and chat management controls. Features auto-scroll and responsive design.
+ */
 export const ChatWindow: React.FC = () => {
   const { messages, loading, clearChat, retryLastMessage } = useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -14,11 +20,17 @@ export const ChatWindow: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
+  /**
+   * Handle chat clearing with confirmation
+   */
   const handleClearChat = async () => {
     await clearChat();
     setShowClearConfirm(false);
   };
 
+  /**
+   * Find the last error message for retry functionality
+   */
   const getLastErrorMessage = () => {
     return [...messages].reverse().find(msg => msg.role === 'assistant' && msg.error);
   };
@@ -45,6 +57,7 @@ export const ChatWindow: React.FC = () => {
             </div>
           </div>
 
+          {/* Clear Chat Button */}
           {messages.length > 0 && (
             <div className="flex items-center gap-2">
               {showClearConfirm ? (
@@ -82,6 +95,7 @@ export const ChatWindow: React.FC = () => {
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <div className="max-w-4xl mx-auto">
           {messages.length === 0 ? (
+            // Empty state
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <MessageSquare className="w-8 h-8 text-blue-600" />
@@ -100,6 +114,7 @@ export const ChatWindow: React.FC = () => {
             </div>
           ) : (
             <>
+              {/* Message List */}
               {messages.map((message) => (
                 <ChatMessage
                   key={message.id}
@@ -109,10 +124,12 @@ export const ChatWindow: React.FC = () => {
                 />
               ))}
               
+              {/* Typing Indicator */}
               {loading && <TypingIndicator />}
             </>
           )}
           
+          {/* Auto-scroll anchor */}
           <div ref={messagesEndRef} />
         </div>
       </div>

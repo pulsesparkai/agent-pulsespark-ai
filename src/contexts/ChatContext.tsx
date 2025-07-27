@@ -4,6 +4,7 @@ import { ChatContextType, ChatMessage, ChatSession, ApiKeyProvider } from '../ty
 import { useAuth } from './AuthContext';
 import { useApiKeys } from './ApiKeysContext';
 import { useNotification } from './NotificationContext';
+import { decryptApiKey } from '../lib/encryption';
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
@@ -37,6 +38,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
   }, [user]);
 
+  /**
+   * Load or create a chat session for the current user
+   * Loads the most recent session or creates a new one if none exists
+   */
   const loadChatHistory = async () => {
     if (!user) return;
 
@@ -77,6 +82,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
   };
 
+  /**
+   * Save the current chat session to Supabase
+   * Updates the messages and timestamp in the database
+   */
   const saveSession = async (updatedMessages: ChatMessage[]) => {
     if (!currentSession || !user) return;
 
@@ -95,6 +104,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
   };
 
+  /**
+   * Send a message to the AI and handle the response
+   * Integrates with the backend API to get AI responses
+   */
   const sendMessage = async (content: string) => {
     if (!user || !currentSession) return;
 
@@ -108,7 +121,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     setLoading(true);
     setError(null);
 
-    // Add user message
+    // Add user message immediately for better UX
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       content,
@@ -121,6 +134,17 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     setMessages(updatedMessages);
 
     try {
+      // Decrypt the API key for backend use
+      const decryptedKey = decryptApiKey(apiKey.encrypted_key);
+
+      // Prepare conversation history (last 10 messages for context)
+      const conversationHistory = updatedMessages
+        .slice(-10)
+        .map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }));
+
       // Call backend API
       const response = await fetch('/api/generate', {
         method: 'POST',
@@ -129,16 +153,17 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
           'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
         },
         body: JSON.stringify({
+          user_id: user.id,
           prompt: content,
-          provider: selectedProvider,
-          apiKeyId: apiKey.id,
-          conversationHistory: updatedMessages.slice(-10) // Last 10 messages for context
+          conversation_history: conversationHistory,
+          api_provider: selectedProvider.toLowerCase(),
+          api_key: decryptedKey
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to generate response');
+        throw new Error(errorData.error || 'Failed to generate response');
       }
 
       const data = await response.json();
@@ -159,10 +184,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     } catch (err: any) {
       setError(err.message);
       
-      // Add error message
+      // Add error message to chat
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: 'Sorry, I encountered an error generating a response.',
+        content: 'Sorry, I encountered an error generating a response. Please try again.',
         role: 'assistant',
         timestamp: new Date().toISOString(),
         provider: selectedProvider,
@@ -177,6 +202,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     }
   };
 
+  /**
+   * Retry the last AI message if it failed
+   * Removes the error message and resends the last user message
+   */
   const retryLastMessage = async () => {
     if (messages.length < 2) return;
     
@@ -192,6 +221,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     await sendMessage(lastUserMessage.content);
   };
 
+  /**
+   * Clear the current chat session
+   * Removes all messages from the current session
+   */
   const clearChat = async () => {
     if (!currentSession) return;
 

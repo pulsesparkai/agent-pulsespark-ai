@@ -9,6 +9,9 @@ interface ProviderSelectorProps {
   disabled?: boolean;
 }
 
+/**
+ * Provider information with colors and styling
+ */
 const PROVIDER_INFO: Record<ApiKeyProvider, { name: string; color: string; bgColor: string }> = {
   'OpenAI': { name: 'OpenAI', color: 'text-green-700', bgColor: 'bg-green-50' },
   'Claude': { name: 'Claude', color: 'text-purple-700', bgColor: 'bg-purple-50' },
@@ -17,6 +20,12 @@ const PROVIDER_INFO: Record<ApiKeyProvider, { name: string; color: string; bgCol
   'Mistral': { name: 'Mistral', color: 'text-red-700', bgColor: 'bg-red-50' }
 };
 
+/**
+ * ProviderSelector Component
+ * 
+ * Dropdown selector for AI providers with visual indicators for availability.
+ * Shows only providers that have configured API keys.
+ */
 export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
   selectedProvider,
   onProviderChange,
@@ -29,11 +38,15 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
   const availableProviders = apiKeys.map(key => key.provider);
   const hasSelectedProviderKey = availableProviders.includes(selectedProvider);
 
+  /**
+   * Handle provider selection
+   */
   const handleProviderSelect = (provider: ApiKeyProvider) => {
     onProviderChange(provider);
     setIsOpen(false);
   };
 
+  // Show warning if no API keys are configured
   if (availableProviders.length === 0) {
     return (
       <div className="flex items-center px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
@@ -46,6 +59,7 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
 
   return (
     <div className="relative">
+      {/* Selector Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
@@ -64,6 +78,7 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
         <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
+      {/* Dropdown Menu */}
       {isOpen && (
         <>
           {/* Backdrop */}
@@ -72,7 +87,7 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Dropdown */}
+          {/* Dropdown Content */}
           <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
             <div className="py-1">
               {availableProviders.map((provider) => {
@@ -100,6 +115,7 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
               })}
             </div>
             
+            {/* Warning for missing API key */}
             {!hasSelectedProviderKey && (
               <div className="border-t border-gray-200 px-3 py-2">
                 <p className="text-xs text-red-600">

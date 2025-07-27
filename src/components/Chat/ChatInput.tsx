@@ -4,6 +4,12 @@ import { ProviderSelector } from './ProviderSelector';
 import { useChat } from '../../contexts/ChatContext';
 import { useApiKeys } from '../../contexts/ApiKeysContext';
 
+/**
+ * ChatInput Component
+ * 
+ * Provides the main input interface for sending messages to AI.
+ * Features auto-resize textarea, provider selection, and smart submit handling.
+ */
 export const ChatInput: React.FC = () => {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -16,7 +22,7 @@ export const ChatInput: React.FC = () => {
   } = useChat();
   const { apiKeys } = useApiKeys();
 
-  // Auto-resize textarea
+  // Auto-resize textarea based on content
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -24,6 +30,10 @@ export const ChatInput: React.FC = () => {
     }
   }, [input]);
 
+  /**
+   * Handle form submission
+   * Validates input and sends message to AI
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -40,6 +50,10 @@ export const ChatInput: React.FC = () => {
     await sendMessage(message);
   };
 
+  /**
+   * Handle keyboard shortcuts
+   * Enter to submit, Shift+Enter for new line
+   */
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -47,6 +61,7 @@ export const ChatInput: React.FC = () => {
     }
   };
 
+  // Check if user has API key for selected provider
   const hasApiKey = apiKeys.some(key => key.provider === selectedProvider);
   const canSubmit = input.trim() && !loading && hasApiKey;
 
@@ -89,6 +104,7 @@ export const ChatInput: React.FC = () => {
               rows={1}
             />
             
+            {/* API Key Warning */}
             {!hasApiKey && (
               <div className="absolute inset-x-0 -bottom-6">
                 <p className="text-xs text-red-600">
@@ -98,6 +114,7 @@ export const ChatInput: React.FC = () => {
             )}
           </div>
 
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={!canSubmit}

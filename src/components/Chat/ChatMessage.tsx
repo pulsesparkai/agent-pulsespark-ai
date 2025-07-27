@@ -8,6 +8,12 @@ interface ChatMessageProps {
   showRetry?: boolean;
 }
 
+/**
+ * ChatMessage Component
+ * 
+ * Renders individual chat messages with proper styling for user/AI messages,
+ * error states, and retry functionality. Supports timestamps and provider info.
+ */
 export const ChatMessage: React.FC<ChatMessageProps> = ({ 
   message, 
   onRetry, 
@@ -16,11 +22,17 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   const isUser = message.role === 'user';
   const hasError = !!message.error;
 
+  /**
+   * Format timestamp for display
+   */
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  /**
+   * Get color for AI provider badge
+   */
   const getProviderColor = (provider?: string) => {
     const colors: Record<string, string> = {
       'OpenAI': 'text-green-600',
@@ -84,7 +96,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             {message.content}
           </div>
           
-          {/* Error Details */}
+          {/* Error Details and Retry */}
           {hasError && message.error && (
             <div className="mt-2 pt-2 border-t border-red-200">
               <p className="text-xs text-red-600">
