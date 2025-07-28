@@ -78,3 +78,4 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
       <span className="sr-only">Loading...</span>
     </div>
   );
+}
