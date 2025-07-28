@@ -326,41 +326,6 @@ function App() {
                             </div>
                           } 
                         />
-                        <Route 
-                          path="/error-boundary-demo" 
-                          element={
-                            <div className="max-w-4xl mx-auto p-8">
-                              <h2 className="text-2xl font-bold text-gray-900 mb-6">Error Boundary Demo</h2>
-                              <div className="space-y-4">
-                                <div className="bg-white p-6 rounded-lg border border-gray-200">
-                                  <h3 className="font-semibold text-gray-900 mb-4">Test Error Boundary</h3>
-                                  <p className="text-gray-600 mb-4">
-                                    Click the button below to trigger an error and see the ErrorBoundary in action:
-                                  </p>
-                                  <button
-                                    onClick={() => {
-                                      throw new Error('This is a test error to demonstrate the ErrorBoundary component');
-                                    }}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                                  >
-                                    Trigger Error
-                                  </button>
-                                </div>
-                                <div className="bg-blue-50 p-4 rounded-lg">
-                                  <h4 className="font-medium text-blue-900 mb-2">ErrorBoundary Features:</h4>
-                                  <ul className="text-sm text-blue-700 space-y-1">
-                                    <li>• Catches JavaScript errors in child components</li>
-                                    <li>• Displays user-friendly error messages</li>
-                                    <li>• Provides retry functionality</li>
-                                    <li>• Logs errors for debugging and monitoring</li>
-                                    <li>• Accessible design with proper ARIA attributes</li>
-                                    <li>• PulseSpark branded styling</li>
-                                  </ul>
-                                </div>
-                              </div>
-                            </div>
-                          } 
-                        />
                         <Route
                           path="/settings"
                           element={
