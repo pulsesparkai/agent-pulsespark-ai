@@ -39,6 +39,7 @@ import PaymentMethodForm from './components/Billing/PaymentMethodForm';
 import { SupportFAQPage } from './components/Support/SupportFAQPage';
 import { AdminDashboard } from './components/Admin/AdminDashboard';
 import UserRoleManagement from './components/Admin/UserRoleManagement';
+import ChatNotifications from './components/Chat/ChatNotifications';
 import { Settings } from 'lucide-react';
 
 // Auth wrapper component
@@ -292,6 +293,34 @@ function App() {
                           element={
                             <div className="max-w-5xl mx-auto">
                               <UserRoleManagement />
+                            </div>
+                          } 
+                        />
+                        <Route 
+                          path="/chat-notifications-demo" 
+                          element={
+                            <div className="max-w-4xl mx-auto p-8">
+                              <h2 className="text-2xl font-bold text-gray-900 mb-6">Chat Notifications Demo</h2>
+                              <div className="bg-gray-100 p-8 rounded-lg min-h-96">
+                                <p className="text-gray-600 mb-4">
+                                  This demo shows the chat notifications system that appears in the bottom-right corner.
+                                  Click the "Add Notification" button to see different notification types.
+                                </p>
+                                <div className="space-y-4">
+                                  <div className="bg-white p-4 rounded-lg">
+                                    <h3 className="font-semibold text-gray-900 mb-2">Features:</h3>
+                                    <ul className="text-sm text-gray-600 space-y-1">
+                                      <li>• Auto-dismiss after 5 seconds</li>
+                                      <li>• Click to interact with notifications</li>
+                                      <li>• Manual dismiss with close button</li>
+                                      <li>• Different types: message, system, success, error</li>
+                                      <li>• Smooth animations and hover effects</li>
+                                      <li>• Keyboard accessible</li>
+                                    </ul>
+                                  </div>
+                                </div>
+                                <ChatNotifications />
+                              </div>
                             </div>
                           } 
                         />
