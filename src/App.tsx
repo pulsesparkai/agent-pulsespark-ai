@@ -41,7 +41,91 @@ import { AdminDashboard } from './components/Admin/AdminDashboard';
 import UserRoleManagement from './components/Admin/UserRoleManagement';
 import ChatNotifications from './components/Chat/ChatNotifications';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
+import ConfirmationModal from './components/Shared/ConfirmationModal';
 import { Settings } from 'lucide-react';
+
+// Demo component for ConfirmationModal
+const ConfirmationModalDemo: React.FC<{ type: 'warning' | 'danger' | 'info' }> = ({ type }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsLoading(true);
+    // Simulate async operation
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setIsLoading(false);
+    setIsOpen(false);
+    alert(`${type} action confirmed!`);
+  };
+
+  const getButtonText = () => {
+    switch (type) {
+      case 'danger': return 'Delete Item';
+      case 'info': return 'Save Changes';
+      case 'warning': 
+      default: return 'Confirm Action';
+    }
+  };
+
+  const getModalProps = () => {
+    switch (type) {
+      case 'danger':
+        return {
+          title: 'Delete Confirmation',
+          message: 'Are you sure you want to delete this item? This action cannot be undone.',
+          confirmText: 'Delete'
+        };
+      case 'info':
+        return {
+          title: 'Save Changes',
+          message: 'Do you want to save your changes before continuing?',
+          confirmText: 'Save'
+        };
+      case 'warning':
+      default:
+        return {
+          title: 'Confirm Action',
+          message: 'Are you sure you want to proceed with this action?',
+          confirmText: 'Confirm'
+        };
+    }
+  };
+
+  const modalProps = getModalProps();
+
+  return (
+    <>
+      <div className="bg-white p-4 rounded-lg">
+        <h3 className="font-semibold text-gray-900 mb-2 capitalize">{type} Modal</h3>
+        <button
+          onClick={() => setIsOpen(true)}
+          className={`
+            w-full px-4 py-2 rounded-md font-medium transition-colors
+            ${type === 'danger' 
+              ? 'bg-red-600 hover:bg-red-700 text-white' 
+              : type === 'info'
+                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }
+          `}
+        >
+          {getButtonText()}
+        </button>
+      </div>
+      
+      <ConfirmationModal
+        isOpen={isOpen}
+        type={type}
+        title={modalProps.title}
+        message={modalProps.message}
+        confirmText={modalProps.confirmText}
+        onConfirm={handleConfirm}
+        onCancel={() => setIsOpen(false)}
+        isLoading={isLoading}
+      />
+    </>
+  );
+};
 
 // Auth wrapper component
 const AuthWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -322,6 +406,24 @@ function App() {
                                   </div>
                                 </div>
                                 <ChatNotifications />
+                              </div>
+                            </div>
+                          } 
+                        />
+                        <Route 
+                          path="/confirmation-modal-demo" 
+                          element={
+                            <div className="max-w-4xl mx-auto p-8">
+                              <h2 className="text-2xl font-bold text-gray-900 mb-6">Confirmation Modal Demo</h2>
+                              <div className="bg-gray-100 p-8 rounded-lg">
+                                <p className="text-gray-600 mb-6">
+                                  Test the confirmation modal component with different types and configurations.
+                                </p>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                  <ConfirmationModalDemo type="warning" />
+                                  <ConfirmationModalDemo type="danger" />
+                                  <ConfirmationModalDemo type="info" />
+                                </div>
                               </div>
                             </div>
                           } 
