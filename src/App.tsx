@@ -10,6 +10,7 @@ import { GitHubProvider } from './contexts/GitHubContext';
 import { AIProviderProvider } from './contexts/AIProviderContext';
 import { MemoryProvider } from './contexts/MemoryContext';
 import { FeedbackProvider } from './contexts/FeedbackContext';
+import { MemoryPage } from './components/Memory';
 import { LoginForm } from './components/Auth/LoginForm';
 import LoginPage from './components/Auth/LoginPage';
 import SignupPage from './components/Auth/SignupPage';
@@ -204,6 +205,7 @@ function App() {
                           <Route path="/dashboard" element={<Dashboard />} />
                           <Route path="/chat" element={<ChatPage />} />
                           <Route path="/chat-interface" element={<ChatInterface />} />
+                          <Route path="/memory" element={<MemoryPage />} />
                           <Route 
                             path="/chat-window" 
                             element={

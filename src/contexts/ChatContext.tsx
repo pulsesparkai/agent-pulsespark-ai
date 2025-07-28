@@ -4,6 +4,7 @@ import { ChatContextType, ChatMessage, ChatSession, ApiKeyProvider } from '../ty
 import { useAuth } from './AuthContext';
 import { useApiKeys } from './ApiKeysContext';
 import { useNotification } from './NotificationContext';
+import { useMemoryContext } from './MemoryContext';
 import { decryptApiKey } from '../lib/encryption';
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -30,6 +31,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { apiKeys } = useApiKeys();
   const { showNotification } = useNotification();
+  const { searchMemory } = useMemoryContext();
 
   // Load chat history on mount
   useEffect(() => {
@@ -107,6 +109,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   /**
    * Send a message to the AI and handle the response
    * Integrates with the backend API to get AI responses
+   * Enhanced with memory context for intelligent responses
    */
   const sendMessage = async (content: string) => {
     if (!user || !currentSession) return;
@@ -134,6 +137,25 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     setMessages(updatedMessages);
 
     try {
+      // Search for relevant memories to enhance context
+      let memoryContext = '';
+      try {
+        const relevantMemories = await searchMemory(content, {
+          topK: 3,
+          threshold: 0.7,
+          projectId: currentProject?.id
+        });
+        
+        if (relevantMemories.length > 0) {
+          memoryContext = '\n\nRelevant context from your memory:\n' + 
+            relevantMemories.map(memory => 
+              `- ${memory.text.substring(0, 200)}${memory.text.length > 200 ? '...' : ''}`
+            ).join('\n');
+        }
+      } catch (memoryError) {
+        console.warn('Failed to fetch memory context:', memoryError);
+      }
+
       // Decrypt the API key for backend use
       const decryptedKey = decryptApiKey(apiKey.encrypted_key);
 
@@ -154,7 +176,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         },
         body: JSON.stringify({
           user_id: user.id,
-          prompt: content,
+          prompt: content + memoryContext,
           conversation_history: conversationHistory,
           api_provider: selectedProvider.toLowerCase(),
           api_key: decryptedKey

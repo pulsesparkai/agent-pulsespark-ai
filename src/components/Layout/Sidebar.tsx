@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Home, Key, FolderOpen, Settings, LogOut, X, MessageSquare, Code } from 'lucide-react';
+import { Home, Key, FolderOpen, Settings, LogOut, X, MessageSquare, Code, Brain } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarProps {
@@ -16,6 +16,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { icon: Home, label: 'Dashboard', path: '/dashboard' },
     { icon: MessageSquare, label: 'AI Chat', path: '/chat' },
     { icon: Code, label: 'Code Editor', path: '/editor' },
+    { icon: Brain, label: 'Memory Bank', path: '/memory' },
     { icon: Key, label: 'API Keys', path: '/api-keys' },
     { icon: FolderOpen, label: 'Projects', path: '/projects' },
     { icon: Settings, label: 'Settings', path: '/settings' },
