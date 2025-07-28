@@ -38,6 +38,7 @@ import SubscriptionBillingPage from './components/Billing/SubscriptionBillingPag
 import PaymentMethodForm from './components/Billing/PaymentMethodForm';
 import { SupportFAQPage } from './components/Support/SupportFAQPage';
 import { AdminDashboard } from './components/Admin/AdminDashboard';
+import UserRoleManagement from './components/Admin/UserRoleManagement';
 import { Settings } from 'lucide-react';
 
 // Auth wrapper component
@@ -283,6 +284,14 @@ function App() {
                           element={
                             <div className="max-w-7xl mx-auto">
                               <AdminDashboard />
+                            </div>
+                          } 
+                        />
+                        <Route 
+                          path="/admin/users" 
+                          element={
+                            <div className="max-w-5xl mx-auto">
+                              <UserRoleManagement />
                             </div>
                           } 
                         />
