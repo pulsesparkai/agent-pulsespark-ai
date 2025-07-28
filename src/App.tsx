@@ -8,6 +8,7 @@ import { ChatProvider } from './contexts/ChatContext';
 import { ProjectProvider } from './contexts/ProjectContext';
 import { GitHubProvider } from './contexts/GitHubContext';
 import { AIProviderProvider } from './contexts/AIProviderContext';
+import { MemoryProvider } from './contexts/MemoryContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import LoginPage from './components/Auth/LoginPage';
 import SignupPage from './components/Auth/SignupPage';
@@ -193,6 +194,7 @@ function App() {
                   <ProjectProvider>
                     <GitHubProvider>
                       <AIProviderProvider>
+                        <MemoryProvider>
                         <AppLayout>
                           <Routes>
                           <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -443,6 +445,7 @@ function App() {
                           <Route path="*" element={<Navigate to="/dashboard" replace />} />
                           </Routes>
                         </AppLayout>
+                        </MemoryProvider>
                       </AIProviderProvider>
                     </GitHubProvider>
                   </ProjectProvider>

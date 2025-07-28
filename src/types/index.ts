@@ -156,6 +156,30 @@ export interface GitHubContextType {
   pushFiles: (repoName: string, files: FileNode[], commitMessage: string) => Promise<void>;
 }
 
+// Memory System Types
+export interface MemoryItem {
+  id: string;
+  text: string;
+  embedding?: number[];
+  metadata: {
+    source?: string;
+    type?: 'chat' | 'code' | 'note' | 'document';
+    importance?: number;
+    [key: string]: any;
+  };
+  tags: string[];
+  similarity?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemorySearchOptions {
+  topK?: number;
+  threshold?: number;
+  projectId?: string;
+  tags?: string[];
+  type?: string;
+}
 // Project and File Management Types
 export interface FileNode {
   id: string;
