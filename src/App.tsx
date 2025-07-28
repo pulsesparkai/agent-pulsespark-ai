@@ -7,6 +7,7 @@ import { ApiKeysProvider } from './contexts/ApiKeysContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { ProjectProvider } from './contexts/ProjectContext';
 import { GitHubProvider } from './contexts/GitHubContext';
+import { AIProviderProvider } from './contexts/AIProviderContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import LoginPage from './components/Auth/LoginPage';
 import SignupPage from './components/Auth/SignupPage';
@@ -191,256 +192,258 @@ function App() {
                 <ChatProvider>
                   <ProjectProvider>
                     <GitHubProvider>
-                      <AppLayout>
-                        <Routes>
-                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/chat" element={<ChatPage />} />
-                        <Route path="/chat-interface" element={<ChatInterface />} />
-                        <Route 
-                          path="/chat-window" 
-                          element={
-                            <div className="h-screen">
-                              <ChatWindow />
-                            </div>
-                          } 
-                        />
-                        <Route path="/editor" element={<CodeEditorPage />} />
-                        <Route path="/signup" element={<SignupPage />} />
-                        <Route path="/api-keys" element={<ApiKeysPage />} />
-                        <Route path="/projects" element={<ProjectsList />} />
-                        <Route path="/project-dashboard" element={<ProjectDashboard />} />
-                        <Route path="/file-explorer" element={<ProjectFileExplorer />} />
-                        <Route path="/project-settings" element={<ProjectSettingsPanel />} />
-                        <Route path="/chat-settings" element={<ChatSettingsPanel />} />
-                        <Route path="/profile-settings" element={<UserProfileSettings />} />
-                        <Route path="/analytics" element={<AIAnalyticsDashboard />} />
-                        <Route 
-                          path="/activity-feed-demo" 
-                          element={
-                            <div className="max-w-4xl mx-auto p-8">
-                              <h2 className="text-2xl font-bold text-gray-900 mb-6">Activity Feed Demo</h2>
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                <div>
-                                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Default Activity Feed</h3>
-                                  <ActivityFeed 
-                                    onActivityClick={(activity) => {
-                                      console.log('Activity clicked:', activity);
-                                      alert(`Clicked: ${activity.description}`);
-                                    }}
-                                    onClearAll={() => {
-                                      console.log('Clear all clicked');
-                                      alert('All activities cleared!');
-                                    }}
-                                  />
-                                </div>
-                                <div>
-                                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Compact Feed (No Actions)</h3>
-                                  <ActivityFeed 
-                                    showActions={false}
-                                    maxHeight="300px"
-                                    className="max-w-sm"
-                                  />
-                                </div>
+                      <AIProviderProvider>
+                        <AppLayout>
+                          <Routes>
+                          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                          <Route path="/dashboard" element={<Dashboard />} />
+                          <Route path="/chat" element={<ChatPage />} />
+                          <Route path="/chat-interface" element={<ChatInterface />} />
+                          <Route 
+                            path="/chat-window" 
+                            element={
+                              <div className="h-screen">
+                                <ChatWindow />
                               </div>
-                            </div>
-                          } 
-                        />
-                        <Route 
-                          path="/chat-input-demo" 
-                          element={
-                            <div className="max-w-2xl mx-auto p-8">
-                              <h2 className="text-2xl font-bold text-gray-900 mb-6">Chat Input Bar Demo</h2>
-                              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                                <div className="h-64 bg-gray-50 flex items-center justify-center">
-                                  <p className="text-gray-500">Chat messages would appear here</p>
-                                </div>
-                                <ChatInputBar 
-                                  onSendMessage={(message) => {
-                                    console.log('Message sent:', message);
-                                    alert(`Message sent: "${message}"`);
-                                  }}
-                                  placeholder="Try typing a message..."
-                                />
-                              </div>
-                            </div>
-                          } 
-                        />
-                        <Route 
-                          path="/chat-bubble-demo" 
-                          element={
-                            <div className="max-w-2xl mx-auto p-8 space-y-4">
-                              <h2 className="text-2xl font-bold text-gray-900 mb-6">Chat Message Bubble Demo</h2>
-                              <ChatMessageBubble 
-                                message="Hello! How can I help you today?" 
-                                isUser={false} 
-                                timestamp={new Date(Date.now() - 300000)} 
-                              />
-                              <ChatMessageBubble 
-                                message="I need help with my React project. Can you explain how to use hooks?" 
-                                isUser={true} 
-                                timestamp={new Date(Date.now() - 240000)} 
-                              />
-                              <ChatMessageBubble 
-                                message="I'd be happy to help! React hooks are functions that let you use state and other React features in functional components. The most common hooks are useState for managing state and useEffect for side effects." 
-                                isUser={false} 
-                                timestamp={new Date(Date.now() - 180000)} 
-                              />
-                              <ChatMessageBubble 
-                                message="That's really helpful, thank you!" 
-                                isUser={true} 
-                                timestamp={new Date(Date.now() - 120000)} 
-                              />
-                            </div>
-                          } 
-                        />
-                        <Route 
-                          path="/chat-sidebar-demo" 
-                          element={
-                            <div className="h-screen flex">
-                              <ChatSidebar 
-                                selectedChatId="1"
-                                onChatSelect={(id) => console.log('Selected chat:', id)}
-                                onNewChat={() => console.log('New chat clicked')}
-                              />
-                              <div className="flex-1 flex items-center justify-center bg-gray-50">
-                                <div className="text-center">
-                                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Chat Sidebar Demo</h2>
-                                  <p className="text-gray-600">Select a chat from the sidebar to view conversation</p>
-                                </div>
-                              </div>
-                            </div>
-                          } 
-                        />
-                        <Route 
-                          path="/notifications-demo" 
-                          element={
-                            <div className="max-w-4xl mx-auto p-8">
-                              <h2 className="text-2xl font-bold text-gray-900 mb-6">User Notifications Panel Demo</h2>
-                              <div className="relative">
-                                <div className="bg-gray-100 p-8 rounded-lg">
-                                  <p className="text-gray-600 mb-4">
-                                    This demo shows the notifications panel that would typically appear as a dropdown from the header.
-                                  </p>
-                                  <UserNotificationsPanel 
-                                    isOpen={true}
-                                    onClose={() => console.log('Close notifications')}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          } 
-                        />
-                        <Route 
-                          path="/billing" 
-                          element={
-                            <div className="max-w-6xl mx-auto">
-                              <SubscriptionBillingPage />
-                            </div>
-                          } 
-                        />
-                        <Route 
-                          path="/payment-method" 
-                          element={
-                            <div className="max-w-4xl mx-auto">
-                              <PaymentMethodForm 
-                                onSubmit={async (data) => {
-                                  console.log('Payment method data:', data);
-                                  // Simulate API call
-                                  await new Promise(resolve => setTimeout(resolve, 2000));
-                                  alert('Payment method saved successfully!');
-                                }}
-                                onCancel={() => {
-                                  console.log('Payment form cancelled');
-                                  alert('Payment form cancelled');
-                                }}
-                              />
-                            </div>
-                          } 
-                        />
-                        <Route 
-                          path="/support" 
-                          element={
-                            <div className="max-w-6xl mx-auto">
-                              <SupportFAQPage />
-                            </div>
-                          } 
-                        />
-                        <Route 
-                          path="/admin" 
-                          element={
-                            <div className="max-w-7xl mx-auto">
-                              <AdminDashboard />
-                            </div>
-                          } 
-                        />
-                        <Route 
-                          path="/admin/users" 
-                          element={
-                            <div className="max-w-5xl mx-auto">
-                              <UserRoleManagement />
-                            </div>
-                          } 
-                        />
-                        <Route 
-                          path="/chat-notifications-demo" 
-                          element={
-                            <div className="max-w-4xl mx-auto p-8">
-                              <h2 className="text-2xl font-bold text-gray-900 mb-6">Chat Notifications Demo</h2>
-                              <div className="bg-gray-100 p-8 rounded-lg min-h-96">
-                                <p className="text-gray-600 mb-4">
-                                  This demo shows the chat notifications system that appears in the bottom-right corner.
-                                  Click the "Add Notification" button to see different notification types.
-                                </p>
-                                <div className="space-y-4">
-                                  <div className="bg-white p-4 rounded-lg">
-                                    <h3 className="font-semibold text-gray-900 mb-2">Features:</h3>
-                                    <ul className="text-sm text-gray-600 space-y-1">
-                                      <li>• Auto-dismiss after 5 seconds</li>
-                                      <li>• Click to interact with notifications</li>
-                                      <li>• Manual dismiss with close button</li>
-                                      <li>• Different types: message, system, success, error</li>
-                                      <li>• Smooth animations and hover effects</li>
-                                      <li>• Keyboard accessible</li>
-                                    </ul>
+                            } 
+                          />
+                          <Route path="/editor" element={<CodeEditorPage />} />
+                          <Route path="/signup" element={<SignupPage />} />
+                          <Route path="/api-keys" element={<ApiKeysPage />} />
+                          <Route path="/projects" element={<ProjectsList />} />
+                          <Route path="/project-dashboard" element={<ProjectDashboard />} />
+                          <Route path="/file-explorer" element={<ProjectFileExplorer />} />
+                          <Route path="/project-settings" element={<ProjectSettingsPanel />} />
+                          <Route path="/chat-settings" element={<ChatSettingsPanel />} />
+                          <Route path="/profile-settings" element={<UserProfileSettings />} />
+                          <Route path="/analytics" element={<AIAnalyticsDashboard />} />
+                          <Route 
+                            path="/activity-feed-demo" 
+                            element={
+                              <div className="max-w-4xl mx-auto p-8">
+                                <h2 className="text-2xl font-bold text-gray-900 mb-6">Activity Feed Demo</h2>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                  <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Default Activity Feed</h3>
+                                    <ActivityFeed 
+                                      onActivityClick={(activity) => {
+                                        console.log('Activity clicked:', activity);
+                                        alert(`Clicked: ${activity.description}`);
+                                      }}
+                                      onClearAll={() => {
+                                        console.log('Clear all clicked');
+                                        alert('All activities cleared!');
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Compact Feed (No Actions)</h3>
+                                    <ActivityFeed 
+                                      showActions={false}
+                                      maxHeight="300px"
+                                      className="max-w-sm"
+                                    />
                                   </div>
                                 </div>
-                                <ChatNotifications />
                               </div>
-                            </div>
-                          } 
-                        />
-                        <Route 
-                          path="/confirmation-modal-demo" 
-                          element={
-                            <div className="max-w-4xl mx-auto p-8">
-                              <h2 className="text-2xl font-bold text-gray-900 mb-6">Confirmation Modal Demo</h2>
-                              <div className="bg-gray-100 p-8 rounded-lg">
-                                <p className="text-gray-600 mb-6">
-                                  Test the confirmation modal component with different types and configurations.
-                                </p>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                  <ConfirmationModalDemo type="warning" />
-                                  <ConfirmationModalDemo type="danger" />
-                                  <ConfirmationModalDemo type="info" />
+                            } 
+                          />
+                          <Route 
+                            path="/chat-input-demo" 
+                            element={
+                              <div className="max-w-2xl mx-auto p-8">
+                                <h2 className="text-2xl font-bold text-gray-900 mb-6">Chat Input Bar Demo</h2>
+                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                  <div className="h-64 bg-gray-50 flex items-center justify-center">
+                                    <p className="text-gray-500">Chat messages would appear here</p>
+                                  </div>
+                                  <ChatInputBar 
+                                    onSendMessage={(message) => {
+                                      console.log('Message sent:', message);
+                                      alert(`Message sent: "${message}"`);
+                                    }}
+                                    placeholder="Try typing a message..."
+                                  />
                                 </div>
                               </div>
-                            </div>
-                          } 
-                        />
-                        <Route
-                          path="/settings"
-                          element={
-                            <PlaceholderPage
-                              title="Settings"
-                              description="Configure your account and application preferences."
-                              icon={<Settings className="w-full h-full" />}
-                            />
-                          }
-                        />
-                        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                        </Routes>
-                      </AppLayout>
+                            } 
+                          />
+                          <Route 
+                            path="/chat-bubble-demo" 
+                            element={
+                              <div className="max-w-2xl mx-auto p-8 space-y-4">
+                                <h2 className="text-2xl font-bold text-gray-900 mb-6">Chat Message Bubble Demo</h2>
+                                <ChatMessageBubble 
+                                  message="Hello! How can I help you today?" 
+                                  isUser={false} 
+                                  timestamp={new Date(Date.now() - 300000)} 
+                                />
+                                <ChatMessageBubble 
+                                  message="I need help with my React project. Can you explain how to use hooks?" 
+                                  isUser={true} 
+                                  timestamp={new Date(Date.now() - 240000)} 
+                                />
+                                <ChatMessageBubble 
+                                  message="I'd be happy to help! React hooks are functions that let you use state and other React features in functional components. The most common hooks are useState for managing state and useEffect for side effects." 
+                                  isUser={false} 
+                                  timestamp={new Date(Date.now() - 180000)} 
+                                />
+                                <ChatMessageBubble 
+                                  message="That's really helpful, thank you!" 
+                                  isUser={true} 
+                                  timestamp={new Date(Date.now() - 120000)} 
+                                />
+                              </div>
+                            } 
+                          />
+                          <Route 
+                            path="/chat-sidebar-demo" 
+                            element={
+                              <div className="h-screen flex">
+                                <ChatSidebar 
+                                  selectedChatId="1"
+                                  onChatSelect={(id) => console.log('Selected chat:', id)}
+                                  onNewChat={() => console.log('New chat clicked')}
+                                />
+                                <div className="flex-1 flex items-center justify-center bg-gray-50">
+                                  <div className="text-center">
+                                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Chat Sidebar Demo</h2>
+                                    <p className="text-gray-600">Select a chat from the sidebar to view conversation</p>
+                                  </div>
+                                </div>
+                              </div>
+                            } 
+                          />
+                          <Route 
+                            path="/notifications-demo" 
+                            element={
+                              <div className="max-w-4xl mx-auto p-8">
+                                <h2 className="text-2xl font-bold text-gray-900 mb-6">User Notifications Panel Demo</h2>
+                                <div className="relative">
+                                  <div className="bg-gray-100 p-8 rounded-lg">
+                                    <p className="text-gray-600 mb-4">
+                                      This demo shows the notifications panel that would typically appear as a dropdown from the header.
+                                    </p>
+                                    <UserNotificationsPanel 
+                                      isOpen={true}
+                                      onClose={() => console.log('Close notifications')}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            } 
+                          />
+                          <Route 
+                            path="/billing" 
+                            element={
+                              <div className="max-w-6xl mx-auto">
+                                <SubscriptionBillingPage />
+                              </div>
+                            } 
+                          />
+                          <Route 
+                            path="/payment-method" 
+                            element={
+                              <div className="max-w-4xl mx-auto">
+                                <PaymentMethodForm 
+                                  onSubmit={async (data) => {
+                                    console.log('Payment method data:', data);
+                                    // Simulate API call
+                                    await new Promise(resolve => setTimeout(resolve, 2000));
+                                    alert('Payment method saved successfully!');
+                                  }}
+                                  onCancel={() => {
+                                    console.log('Payment form cancelled');
+                                    alert('Payment form cancelled');
+                                  }}
+                                />
+                              </div>
+                            } 
+                          />
+                          <Route 
+                            path="/support" 
+                            element={
+                              <div className="max-w-6xl mx-auto">
+                                <SupportFAQPage />
+                              </div>
+                            } 
+                          />
+                          <Route 
+                            path="/admin" 
+                            element={
+                              <div className="max-w-7xl mx-auto">
+                                <AdminDashboard />
+                              </div>
+                            } 
+                          />
+                          <Route 
+                            path="/admin/users" 
+                            element={
+                              <div className="max-w-5xl mx-auto">
+                                <UserRoleManagement />
+                              </div>
+                            } 
+                          />
+                          <Route 
+                            path="/chat-notifications-demo" 
+                            element={
+                              <div className="max-w-4xl mx-auto p-8">
+                                <h2 className="text-2xl font-bold text-gray-900 mb-6">Chat Notifications Demo</h2>
+                                <div className="bg-gray-100 p-8 rounded-lg min-h-96">
+                                  <p className="text-gray-600 mb-4">
+                                    This demo shows the chat notifications system that appears in the bottom-right corner.
+                                    Click the "Add Notification" button to see different notification types.
+                                  </p>
+                                  <div className="space-y-4">
+                                    <div className="bg-white p-4 rounded-lg">
+                                      <h3 className="font-semibold text-gray-900 mb-2">Features:</h3>
+                                      <ul className="text-sm text-gray-600 space-y-1">
+                                        <li>• Auto-dismiss after 5 seconds</li>
+                                        <li>• Click to interact with notifications</li>
+                                        <li>• Manual dismiss with close button</li>
+                                        <li>• Different types: message, system, success, error</li>
+                                        <li>• Smooth animations and hover effects</li>
+                                        <li>• Keyboard accessible</li>
+                                      </ul>
+                                    </div>
+                                  </div>
+                                  <ChatNotifications />
+                                </div>
+                              </div>
+                            } 
+                          />
+                          <Route 
+                            path="/confirmation-modal-demo" 
+                            element={
+                              <div className="max-w-4xl mx-auto p-8">
+                                <h2 className="text-2xl font-bold text-gray-900 mb-6">Confirmation Modal Demo</h2>
+                                <div className="bg-gray-100 p-8 rounded-lg">
+                                  <p className="text-gray-600 mb-6">
+                                    Test the confirmation modal component with different types and configurations.
+                                  </p>
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <ConfirmationModalDemo type="warning" />
+                                    <ConfirmationModalDemo type="danger" />
+                                    <ConfirmationModalDemo type="info" />
+                                  </div>
+                                </div>
+                              </div>
+                            } 
+                          />
+                          <Route
+                            path="/settings"
+                            element={
+                              <PlaceholderPage
+                                title="Settings"
+                                description="Configure your account and application preferences."
+                                icon={<Settings className="w-full h-full" />}
+                              />
+                            }
+                          />
+                          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                          </Routes>
+                        </AppLayout>
+                      </AIProviderProvider>
                     </GitHubProvider>
                   </ProjectProvider>
                 </ChatProvider>

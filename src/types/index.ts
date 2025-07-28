@@ -59,6 +59,18 @@ export interface ChatMessage {
   error?: string;
 }
 
+export interface AIProviderMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+export interface AIResponse {
+  content: string;
+  provider: string;
+  tokensUsed?: number;
+  model?: string;
+}
+
 export interface ChatSession {
   id: string;
   user_id: string;
