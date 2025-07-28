@@ -5,6 +5,7 @@ FastAPI backend for agent.pulsespark.ai - Multi-provider AI code generation API.
 ## Features
 
 - **Multi-Provider Support**: OpenAI, Claude, DeepSeek, Grok, Mistral
+- **Custom Memory System**: Vector-based semantic search with pgvector
 - **Secure API Key Handling**: User-provided API keys with no server-side storage
 - **Async Architecture**: High-performance async HTTP handling
 - **Comprehensive Error Handling**: Proper error codes and messages
@@ -49,6 +50,57 @@ python main.py
 ### POST /generate
 
 Generate AI responses using selected provider.
+
+### Memory System Endpoints
+
+#### GET /memory-items
+Retrieve paginated memory items with optional search functionality.
+
+**Query Parameters:**
+- `user_id` (required): User UUID
+- `project_id` (optional): Project UUID filter
+- `search` (optional): Search query for similarity or text search
+- `page` (optional): Page number (default: 1)
+- `page_size` (optional): Items per page (default: 20, max: 100)
+- `search_type` (optional): "vector", "text", or "hybrid" (default: "hybrid")
+- `similarity_threshold` (optional): Minimum similarity for vector search (default: 0.7)
+
+#### POST /memory-items
+Create a new memory item with vector embedding.
+
+**Request Body:**
+```json
+{
+  "user_id": "uuid-string",
+  "project_id": "uuid-string",
+  "text": "Memory content to store",
+  "embedding": [1536-dimensional vector],
+  "metadata": {
+    "source": "chat",
+    "type": "code",
+    "importance": 3
+  },
+  "tags": ["react", "hooks", "frontend"]
+}
+```
+
+#### GET /memory-items/{id}
+Retrieve a specific memory item by ID.
+
+#### PUT /memory-items/{id}
+Update an existing memory item.
+
+#### DELETE /memory-items/{id}
+Delete a memory item by ID.
+
+#### GET /memory-items/stats/summary
+Get comprehensive memory usage statistics.
+
+#### POST /memory-items/bulk-delete
+Delete multiple memory items in a single operation.
+
+#### GET /memory-items/health
+Health check for memory system functionality.
 
 **Request Body:**
 ```json
