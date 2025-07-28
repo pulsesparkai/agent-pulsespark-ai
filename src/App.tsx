@@ -9,6 +9,7 @@ import { ProjectProvider } from './contexts/ProjectContext';
 import { GitHubProvider } from './contexts/GitHubContext';
 import { AIProviderProvider } from './contexts/AIProviderContext';
 import { MemoryProvider } from './contexts/MemoryContext';
+import { FeedbackProvider } from './contexts/FeedbackContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import LoginPage from './components/Auth/LoginPage';
 import SignupPage from './components/Auth/SignupPage';
@@ -44,6 +45,7 @@ import UserRoleManagement from './components/Admin/UserRoleManagement';
 import ChatNotifications from './components/Chat/ChatNotifications';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
 import ConfirmationModal from './components/Shared/ConfirmationModal';
+import { FeedbackForm } from './components/Feedback/FeedbackForm';
 import { Settings } from 'lucide-react';
 
 // Demo component for ConfirmationModal
@@ -195,6 +197,7 @@ function App() {
                     <GitHubProvider>
                       <AIProviderProvider>
                         <MemoryProvider>
+                        <FeedbackProvider>
                         <AppLayout>
                           <Routes>
                           <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -432,6 +435,74 @@ function App() {
                               </div>
                             } 
                           />
+                          <Route 
+                            path="/feedback-demo" 
+                            element={
+                              <div className="max-w-4xl mx-auto p-8">
+                                <h2 className="text-2xl font-bold text-gray-900 mb-6">Feedback System Demo</h2>
+                                <div className="space-y-8">
+                                  <div className="bg-gray-100 p-6 rounded-lg">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">AI Response Feedback</h3>
+                                    <div className="bg-white p-4 rounded-lg mb-4">
+                                      <p className="text-gray-800 mb-2">
+                                        <strong>AI Assistant:</strong> Here's a React component that demonstrates useState hook usage:
+                                      </p>
+                                      <pre className="bg-gray-100 p-3 rounded text-sm overflow-x-auto">
+{`function Counter() {
+  const [count, setCount] = useState(0);
+  
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount(count + 1)}>
+        Increment
+      </button>
+    </div>
+  );
+}`}
+                                      </pre>
+                                    </div>
+                                    <FeedbackForm
+                                      aiResponseId="demo-response-1"
+                                      aiProvider="OpenAI"
+                                      chatSessionId="demo-session-1"
+                                      responseContext={{
+                                        topic: 'React useState hook',
+                                        code_example: true,
+                                        response_length: 'medium'
+                                      }}
+                                      onFeedbackSubmitted={(feedback) => {
+                                        console.log('Demo feedback submitted:', feedback);
+                                        alert('Feedback submitted successfully!');
+                                      }}
+                                    />
+                                  </div>
+                                  
+                                  <div className="bg-gray-100 p-6 rounded-lg">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Compact Feedback Form</h3>
+                                    <div className="bg-white p-4 rounded-lg mb-4">
+                                      <p className="text-gray-800">
+                                        <strong>AI Assistant:</strong> To center a div, you can use flexbox with justify-content: center and align-items: center.
+                                      </p>
+                                    </div>
+                                    <FeedbackForm
+                                      aiResponseId="demo-response-2"
+                                      aiProvider="Claude"
+                                      compact={true}
+                                      responseContext={{
+                                        topic: 'CSS centering',
+                                        response_length: 'short'
+                                      }}
+                                      onFeedbackSubmitted={(feedback) => {
+                                        console.log('Compact feedback submitted:', feedback);
+                                        alert('Compact feedback submitted!');
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            } 
+                          />
                           <Route
                             path="/settings"
                             element={
@@ -445,6 +516,7 @@ function App() {
                           <Route path="*" element={<Navigate to="/dashboard" replace />} />
                           </Routes>
                         </AppLayout>
+                        </FeedbackProvider>
                         </MemoryProvider>
                       </AIProviderProvider>
                     </GitHubProvider>

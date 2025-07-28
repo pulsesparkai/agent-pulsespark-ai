@@ -1,11 +1,14 @@
 import React from 'react';
 import { ChatMessage as ChatMessageType } from '../../types';
 import { User, Bot, AlertCircle, RefreshCw } from 'lucide-react';
+import { FeedbackForm } from '../Feedback/FeedbackForm';
 
 interface ChatMessageProps {
   message: ChatMessageType;
   onRetry?: () => void;
   showRetry?: boolean;
+  showFeedback?: boolean;
+  chatSessionId?: string;
 }
 
 /**
@@ -17,7 +20,9 @@ interface ChatMessageProps {
 export const ChatMessage: React.FC<ChatMessageProps> = ({ 
   message, 
   onRetry, 
-  showRetry = false 
+  showRetry = false,
+  showFeedback = true,
+  chatSessionId
 }) => {
   const isUser = message.role === 'user';
   const hasError = !!message.error;
@@ -115,6 +120,26 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           )}
         </div>
       </div>
+
+      {/* Feedback Form - Only show for AI messages without errors */}
+      {showFeedback && !isUser && !hasError && message.provider && (
+        <div className="mt-3 max-w-md">
+          <FeedbackForm
+            aiResponseId={message.id}
+            aiProvider={message.provider}
+            chatSessionId={chatSessionId}
+            responseContext={{
+              message_content: message.content,
+              message_timestamp: message.timestamp,
+              conversation_context: 'chat_message'
+            }}
+            compact={true}
+            onFeedbackSubmitted={(feedback) => {
+              console.log('Feedback submitted for message:', message.id, feedback);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

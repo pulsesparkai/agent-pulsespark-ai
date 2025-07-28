@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 import { ChatMessageBubble } from './ChatMessageBubble';
+import { useChat } from '../../contexts/ChatContext';
 
 // Type definitions for chat messages
 interface ChatMessage {

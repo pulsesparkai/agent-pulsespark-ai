@@ -180,6 +180,34 @@ export interface MemorySearchOptions {
   tags?: string[];
   type?: string;
 }
+
+// Feedback System Types
+export interface FeedbackEntry {
+  id: string;
+  user_id: string;
+  project_id?: string;
+  chat_session_id?: string;
+  ai_response_id: string;
+  ai_provider: string;
+  rating_type: 'thumbs' | 'stars' | 'scale';
+  rating_value: number;
+  feedback_text?: string;
+  response_context: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeedbackStats {
+  total_feedback: number;
+  average_rating: number;
+  rating_distribution: Record<string, number>;
+  provider_stats: Record<string, {
+    count: number;
+    avg_rating: number;
+  }>;
+  period_days: number;
+  generated_at: string;
+}
 // Project and File Management Types
 export interface FileNode {
   id: string;
