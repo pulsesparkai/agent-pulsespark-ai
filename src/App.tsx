@@ -29,9 +29,7 @@ export const ChatPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // ...rest of your component code
-  
+    
   // UI state
   const [inputMessage, setInputMessage] = useState('');
   const [selectedProvider, setSelectedProvider] = useState<ApiKeyProvider>('OpenAI');
