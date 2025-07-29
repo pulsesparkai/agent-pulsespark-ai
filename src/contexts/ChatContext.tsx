@@ -6,6 +6,7 @@ import { useApiKeys } from './ApiKeysContext';
 import { useNotification } from './NotificationContext';
 import { useMemoryContext } from './MemoryContext';
 import { decryptApiKey } from '../lib/encryption';
+import { API_CONFIG } from '../lib/config';
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
@@ -168,11 +169,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         }));
 
       // Call backend API
-const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://api.pulsespark.ai'
-  : 'https://api.pulsespark.ai';
-
-const response = await fetch(`${API_URL}/generate`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GENERATE}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
