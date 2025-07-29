@@ -209,6 +209,7 @@ function App() {
                                 <Route path="/signup" element={<SignupPage />} />
                                 <Route path="/api-keys" element={<ApiKeysPage />} />
                                 <Route path="/projects" element={<ProjectsList />} />
+                                <Route path="/api-keys" element={<ApiKeysPage />} />
                                 <Route path="/project-dashboard" element={<ProjectDashboard />} />
                                 <Route path="/file-explorer" element={<ProjectFileExplorer />} />
                                 <Route path="/project-settings" element={<ProjectSettingsPanel />} />

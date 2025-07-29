@@ -57,6 +57,12 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
       icon: FolderOpen
     },
     {
+      id: 'api-keys',
+      label: 'API Keys',
+      path: '/api-keys',
+      icon: Key
+    },
+    {
       id: 'chat',
       label: 'Chat',
       path: '/chat',
