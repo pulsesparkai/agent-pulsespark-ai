@@ -355,7 +355,10 @@ export const useMemory = (): UseMemoryReturn => {
 
       const { error: updateError } = await supabase
         .from('memory_items')
-        .update(updateData)
+        .update({
+          ...updateData,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', memoryId)
         .eq('user_id', user.id); // Ensure user can only update their own memories
 

@@ -204,7 +204,10 @@ export const useFeedback = (): UseFeedbackReturn => {
 
       const { error: updateError } = await supabase
         .from('feedback_entries')
-        .update(updateData)
+        .update({
+          ...updateData,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', feedbackId)
         .eq('user_id', user.id); // Ensure user can only update their own feedback
 
