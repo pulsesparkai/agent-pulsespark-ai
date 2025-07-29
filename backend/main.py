@@ -51,7 +51,7 @@ class APIProvider(str, Enum):
 
 class ChatMessage(BaseModel):
     """Individual chat message structure"""
-    role: str = Field(..., regex="^(user|assistant|system)$")
+    role: str = Field(..., pattern="^(user|assistant|system)$")  # FIXED HERE: regex -> pattern
     content: str = Field(..., min_length=1, max_length=50000)
     timestamp: Optional[str] = None
 
@@ -553,27 +553,4 @@ async def http_exception_handler(request, exc):
         "error": exc.detail,
         "error_code": f"HTTP_{exc.status_code}",
         "timestamp": datetime.utcnow().isoformat()
-    }
-
-@app.exception_handler(Exception)
-async def general_exception_handler(request, exc):
-    """General exception handler for unexpected errors"""
-    logger.error(f"Unhandled exception: {exc}")
-    return {
-        "error": "Internal server error",
-        "error_code": "INTERNAL_ERROR",
-        "timestamp": datetime.utcnow().isoformat()
-    }
-
-if __name__ == "__main__":
-    import uvicorn
-    import os
-    
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=port,
-        reload=False,
-        log_level="info"
-    )
+   
