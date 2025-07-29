@@ -46,6 +46,7 @@ A modern React application with Supabase backend for managing AI projects, chat 
    ```env
    VITE_SUPABASE_URL=your_supabase_project_url
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_API_URL=https://api.pulsespark.ai
    VITE_APP_NAME=PulseSpark AI
    VITE_APP_VERSION=1.0.0
    ```
@@ -113,6 +114,7 @@ In your Vercel project settings, add these environment variables:
 ```
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_API_URL=https://api.pulsespark.ai
 VITE_APP_NAME=PulseSpark AI
 VITE_APP_VERSION=1.0.0
 NODE_ENV=production

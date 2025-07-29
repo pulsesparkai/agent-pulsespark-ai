@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useProject } from '../contexts/ProjectContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { API_CONFIG } from '../lib/config';
 
 /**
  * Memory Item Interface
@@ -115,7 +116,7 @@ export const useMemory = (): UseMemoryReturn => {
     try {
       // This would typically be a call to your backend API endpoint
       // that securely handles the OpenAI API key
-      const response = await fetch('https://api.pulsespark.ai/api/embeddings', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.EMBEDDINGS}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

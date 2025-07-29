@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useProject } from '../../contexts/ProjectContext';
 import { LoadingSpinner } from '../Shared/LoadingSpinner';
 import { MemoryItem } from '../../hooks/useMemory';
+import { API_CONFIG } from '../../lib/config';
 
 interface MemorySearchProps {
   onMemorySelect?: (memory: MemoryItem) => void;
