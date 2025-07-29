@@ -115,7 +115,7 @@ export const useMemory = (): UseMemoryReturn => {
     try {
       // This would typically be a call to your backend API endpoint
       // that securely handles the OpenAI API key
-      const response = await fetch('/api/embeddings', {
+      const response = await fetch('https://api.pulsespark.ai/api/embeddings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

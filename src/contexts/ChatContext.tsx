@@ -169,8 +169,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
       // Call backend API
 const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://agent-pulsespark-ai.onrender.com'
-  : 'https://agent-pulsespark-ai.onrender.com/generate';
+  ? 'https://api.pulsespark.ai'
+  : 'https://api.pulsespark.ai';
 
 const response = await fetch(`${API_URL}/generate`, {
         method: 'POST',
