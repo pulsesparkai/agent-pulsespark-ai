@@ -3,6 +3,7 @@ import { useLocation, Link } from 'react-router-dom';
 import { Home, Key, FolderOpen, Settings, LogOut, X, MessageSquare, Code, Brain, BarChart3 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useErrorHandler } from '../../hooks/useErrorHandler';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface SidebarProps {
 export const SidebarNavigation: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { signOut } = useAuth();
+  const { handleError, handleSuccess } = useErrorHandler();
   const { handleError, handleSuccess } = useErrorHandler();
 
   const menuItems = [
@@ -27,6 +29,7 @@ export const SidebarNavigation: React.FC<SidebarProps> = ({ isOpen, onClose }) =
   const handleSignOut = async () => {
     try {
       await signOut();
+      handleSuccess('Successfully signed out');
       handleSuccess('Successfully signed out');
     } catch (error) {
       handleError(error, 'Sign out');

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { AuthContextType, User } from '../types';
+import { useErrorHandler } from '../hooks/useErrorHandler';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -23,23 +24,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        // Note: We use Supabase's built-in auth.users table, not a custom users table
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          created_at: session.user.created_at!
-        });
-      }
-      setLoading(false);
-    };
-
-    getSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           // Note: We use Supabase's built-in auth.users table, not a custom users table
           setUser({
@@ -47,10 +33,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             email: session.user.email!,
             created_at: session.user.created_at!
           });
-        } else {
-          setUser(null);
         }
+      } catch (error) {
+        console.error('Error getting session:', error);
+      } finally {
         setLoading(false);
+      }
+    };
+
+    getSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        try {
+          if (session?.user) {
+            // Note: We use Supabase's built-in auth.users table, not a custom users table
+            setUser({
+              id: session.user.id,
+              email: session.user.email!,
+              created_at: session.user.created_at!
+            });
+          } else {
+            setUser(null);
+          }
+        } catch (error) {
+          console.error('Error handling auth state change:', error);
+          setUser(null);
+        } finally {
+          setLoading(false);
+        }
       }
     );
 
@@ -58,8 +70,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const signUp = async (email: string, password: string) => {
-    setLoading(true);
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -77,8 +89,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signIn = async (email: string, password: string) => {
-    setLoading(true);
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -93,8 +105,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signOut = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (error: any) {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
+import { ErrorBoundary } from './components/Shared/ErrorBoundary';
 import { AuthProvider } from './contexts/AuthContext';
 import { ApiKeysProvider } from './contexts/ApiKeysContext';
 import { ProjectProvider } from './contexts/ProjectContext';
@@ -95,7 +96,29 @@ function App() {
     };
   }, []);
 
+  // Handle uncaught errors in production
+  React.useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('Uncaught error:', event.error);
+      // In production, send to error monitoring service
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      // In production, send to error monitoring service
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   return (
+    <ErrorBoundary>
     <ErrorBoundary>
       <NotificationProvider>
         <AuthProvider>
@@ -146,6 +169,7 @@ function App() {
           </ApiKeysProvider>
         </AuthProvider>
       </NotificationProvider>
+    </ErrorBoundary>
     </ErrorBoundary>
   );
 }
