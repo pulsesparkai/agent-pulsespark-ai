@@ -1,306 +1,972 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useApiKeys } from '../../contexts/ApiKeysContext';
+import { useNotification } from '../../contexts/NotificationContext';
+import { supabase } from '../../lib/supabase';
+import { LoadingSpinner } from '../Shared/LoadingSpinner';
 import { 
-  Home, 
-  FolderOpen, 
   MessageSquare, 
-  Key, 
-  Settings, 
-  ChevronLeft, 
-  ChevronRight,
-  X,
-  Menu
+  Plus, 
+  Send, 
+  Bot, 
+  User, 
+  Trash2,
+  Search,
+  X
+import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useApiKeys } from '../../contexts/ApiKeysContext';
+import { useNotification } from '../../contexts/NotificationContext';
+import { supabase } from '../../lib/supabase';
+import { LoadingSpinner } from '../Shared/LoadingSpinner';
+import { 
+  MessageSquare, 
+  Plus, 
+  Send, 
+  Bot, 
+  User, 
+  Trash2,
+  Edit2,
+  Search,
+  Filter
 } from 'lucide-react';
-
-interface NavigationItem {
-  id: string;
-  label: string;
-  path: string;
-  icon: React.ComponentType<any>;
-}
-
-interface SidebarNavigationProps {
-  isOpen?: boolean;
-  onClose?: () => void;
-  className?: string;
-}
+import { ChatMessage, ChatSession, ApiKeyProvider } from '../../types';
 
 /**
- * SidebarNavigation Component
+ * ChatPage Component
  * 
- * Fixed vertical navigation sidebar for agent.pulsespark.ai with PulseSpark branding.
- * Features collapsible design, responsive mobile drawer, and smooth animations.
- * Consistent green and white color scheme with proper accessibility support.
+ * Complete chat management interface with session management,
+ * message history, and AI provider integration.
  */
-export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
-  isOpen = true,
-  onClose,
-  className = ''
-}) => {
-  // Navigation state management
-  const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+export const ChatPage: React.FC = () => {
+  const { user } = useAuth();
+  const { apiKeys } = useApiKeys();
+  const { showNotification } = useNotification();
 
-  // Navigation menu items with icons and paths
-  const navigationItems: NavigationItem[] = [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      path: '/dashboard',
-      icon: Home
-    },
-    {
-      id: 'projects',
-     label: 'Projects',
-     path: '/projects-list',
-      icon: FolderOpen
-    },
-    {
-      id: 'api-keys',
-      label: 'API Keys',
-      path: '/api-keys',
-      icon: Key
-    },
-    {
-      id: 'chat',
-      label: 'Chat',
-      path: '/chat',
-      icon: MessageSquare
-    },
-    {
-      id: 'api-keys',
-      label: 'API Keys',
-      path: '/api-keys',
-      icon: Key
-    },
-    {
-      id: 'settings',
-      label: 'Settings',
-      path: '/settings',
-      icon: Settings
+  // State management
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // UI state
+  const [inputMessage, setInputMessage] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState<ApiKeyProvider>('OpenAI');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showNewSessionModal, setShowNewSessionModal] = useState(false);
+  const [newSessionTitle, setNewSessionTitle] = useState('');
+
+  // Load chat sessions on mount
+  useEffect(() => {
+    if (user) {
+      loadChatSessions();
     }
-  ];
+  }, [user]);
+
+  // Load messages when session changes
+  useEffect(() => {
+    if (currentSession) {
+      setMessages(currentSession.messages || []);
+    }
+  }, [currentSession]);
 
   /**
-   * Handle window resize to detect mobile breakpoint
-   * Updates mobile state and manages sidebar behavior accordingly
+   * Load all chat sessions for the current user
    */
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 1024; // lg breakpoint
-      setIsMobile(mobile);
+  const loadChatSessions = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      setChatSessions(data || []);
       
-      // Auto-collapse on mobile
-      if (mobile) {
-        setIsCollapsed(false); // Don't collapse on mobile, use drawer instead
+      // Select first session if available
+      if (data && data.length > 0 && !currentSession) {
+        setCurrentSession(data[0]);
       }
+
+    } catch (err: any) {
+      setError(err.message);
+      showNotification('Failed to load chat sessions', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Create a new chat session
+   */
+  const createNewSession = async () => {
+    if (!user || !newSessionTitle.trim()) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .insert({
+          user_id: user.id,
+          title: newSessionTitle.trim(),
+          messages: []
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setChatSessions(prev => [data, ...prev]);
+      setCurrentSession(data);
+      setNewSessionTitle('');
+      setShowNewSessionModal(false);
+      showNotification('New chat session created', 'success');
+
+    } catch (err: any) {
+      showNotification('Failed to create chat session', 'error');
+    }
+  };
+
+  /**
+   * Send a message to AI
+   */
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || !currentSession || sending) return;
+
+    const apiKey = apiKeys.find(key => key.provider === selectedProvider);
+    if (!apiKey) {
+      showNotification(`No API key found for ${selectedProvider}`, 'error');
+      return;
+    }
+
+    setSending(true);
+
+    // Add user message
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: inputMessage,
+      role: 'user',
+      timestamp: new Date().toISOString(),
+      provider: selectedProvider
     };
 
-    // Initial check
-    handleResize();
-    
-    // Add resize listener
-    window.addEventListener('resize', handleResize);
-    
-    // Cleanup
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setInputMessage('');
 
-  /**
-   * Toggle sidebar collapse state
-   * Only available on desktop view
-   */
-  const toggleCollapse = () => {
-    if (!isMobile) {
-      setIsCollapsed(!isCollapsed);
+    try {
+      // Simulate AI response (replace with actual API call)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: `This is a simulated response from ${selectedProvider}. In production, this would be the actual AI response.`,
+        role: 'assistant',
+        timestamp: new Date().toISOString(),
+        provider: selectedProvider
+      };
+
+      const finalMessages = [...updatedMessages, aiMessage];
+      setMessages(finalMessages);
+
+      // Save to database
+      await supabase
+        .from('chat_sessions')
+        .update({
+          messages: finalMessages,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentSession.id);
+
+    } catch (err: any) {
+      showNotification('Failed to send message', 'error');
+    } finally {
+      setSending(false);
     }
   };
 
   /**
-   * Handle mobile drawer close
-   * Calls parent onClose callback if provided
+   * Delete a chat session
    */
-  const handleMobileClose = () => {
-    if (onClose) {
-      onClose();
+  const deleteSession = async (sessionId: string) => {
+    if (!window.confirm('Are you sure you want to delete this chat session?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) throw error;
+
+      setChatSessions(prev => prev.filter(s => s.id !== sessionId));
+      
+      if (currentSession?.id === sessionId) {
+        const remaining = chatSessions.filter(s => s.id !== sessionId);
+        setCurrentSession(remaining[0] || null);
+      }
+
+      showNotification('Chat session deleted', 'success');
+
+    } catch (err: any) {
+      showNotification('Failed to delete chat session', 'error');
     }
   };
 
-  /**
-   * Check if navigation item is currently active
-   * Compares current location with item path
-   */
-  const isActiveItem = (path: string): boolean => {
-    return location.pathname === path;
-  };
+  // Filter sessions based on search
+  const filteredSessions = chatSessions.filter(session =>
+    session.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  /**
-   * Render navigation item with proper styling and states
-   * Handles active, hover, and collapsed states
-   */
-  const renderNavigationItem = (item: NavigationItem) => {
-    const Icon = item.icon;
-    const isActive = isActiveItem(item.path);
-
+  if (loading) {
     return (
-      <li key={item.id}>
-        <Link
-          to={item.path}
-          onClick={isMobile ? handleMobileClose : undefined}
-          className={`
-            flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
-            focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2
-            ${isActive 
-              ? 'bg-green-100 text-green-700 font-semibold border-r-4 border-green-600' 
-              : 'text-gray-700 hover:bg-green-50 hover:text-green-600'
-            }
-            ${isCollapsed && !isMobile ? 'justify-center px-2' : ''}
-          `}
-          title={isCollapsed && !isMobile ? item.label : undefined}
-          aria-label={isCollapsed && !isMobile ? item.label : undefined}
-        >
-          {/* Navigation Icon */}
-          <Icon className={`
-            w-5 h-5 flex-shrink-0
-            ${isActive ? 'text-green-600' : 'text-current'}
-          `} />
-          
-          {/* Navigation Label - Hidden when collapsed on desktop */}
-          {(!isCollapsed || isMobile) && (
-            <span className="truncate">{item.label}</span>
-          )}
-        </Link>
-      </li>
-    );
-  };
-
-  // Mobile drawer overlay and sidebar
-  if (isMobile) {
-    return (
-      <>
-        {/* Mobile Overlay - Dark background when drawer is open */}
-        {isOpen && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-            onClick={handleMobileClose}
-            aria-hidden="true"
-          />
-        )}
-
-        {/* Mobile Drawer - Slides in from left */}
-        <aside
-          className={`
-            fixed top-0 left-0 h-full bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out
-            ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-            lg:hidden w-72 ${className}
-          `}
-          aria-label="Main navigation"
-        >
-          {/* Mobile Header with Close Button */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div className="flex items-center gap-3">
-              {/* PulseSpark Logo */}
-              <div className="rounded-full w-10 h-10 bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center font-bold text-white">
-                PS
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">PulseSpark</h2>
-                <p className="text-xs text-gray-500">AI Agent Platform</p>
-              </div>
-            </div>
-            
-            {/* Close Button */}
-            <button
-              onClick={handleMobileClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-              aria-label="Close navigation menu"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Mobile Navigation Menu */}
-          <nav className="flex-1 px-4 py-6" role="navigation">
-            <ul className="space-y-2" role="list">
-              {navigationItems.map(renderNavigationItem)}
-            </ul>
-          </nav>
-        </aside>
-      </>
+      <div className="h-screen bg-gray-900 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
     );
   }
 
-  // Desktop sidebar
-  return (
-    <aside
-      className={`
-        fixed top-16 left-0 h-[calc(100vh-4rem)] bg-white shadow-lg border-r border-gray-200 z-30
-        transition-all duration-300 ease-in-out
-        ${isCollapsed ? 'w-20' : 'w-72'}
-        ${className}
-      `}
-      aria-label="Main navigation"
-    >
-      <div className="flex flex-col h-full">
-        {/* Desktop Header - Only show when not collapsed */}
-        {!isCollapsed && (
-          <div className="flex items-center gap-3 p-6 border-b border-gray-200">
-            {/* PulseSpark Logo */}
-            <div className="rounded-full w-10 h-10 bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center font-bold text-white">
-              PS
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">PulseSpark</h2>
-              <p className="text-xs text-gray-500">AI Agent Platform</p>
-            </div>
-          </div>
-        )}
+  const { user } = useAuth();
+  const { apiKeys } = useApiKeys();
+  const { showNotification } = useNotification();
 
-        {/* Collapsed Header - Show minimal logo when collapsed */}
-        {isCollapsed && (
-          <div className="flex justify-center p-4 border-b border-gray-200">
-            <div className="rounded-full w-10 h-10 bg-gradient-to-br from-green-600 to-green-700 flex items-center justify-center font-bold text-white">
-              PS
-            </div>
-          </div>
-        )}
+  // State management
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // UI state
+  const [inputMessage, setInputMessage] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState<ApiKeyProvider>('OpenAI');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showNewSessionModal, setShowNewSessionModal] = useState(false);
+  const [newSessionTitle, setNewSessionTitle] = useState('');
 
-        {/* Desktop Navigation Menu */}
-        <nav className="flex-1 px-4 py-6 overflow-y-auto" role="navigation">
-          <ul className="space-y-2" role="list">
-            {navigationItems.map(renderNavigationItem)}
-          </ul>
-        </nav>
+  // Load chat sessions on mount
+  useEffect(() => {
+    if (user) {
+      loadChatSessions();
+    }
+  }, [user]);
 
-        {/* Collapse Toggle Button - Desktop only */}
-        <div className="p-4 border-t border-gray-200">
-          <button
-            onClick={toggleCollapse}
-            className={`
-              flex items-center gap-3 w-full px-4 py-3 text-gray-600 hover:text-green-600 
-              hover:bg-green-50 rounded-lg transition-colors focus:outline-none 
-              focus:ring-2 focus:ring-green-500 focus:ring-offset-2
-              ${isCollapsed ? 'justify-center px-2' : ''}
-            `}
-            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-expanded={!isCollapsed}
-          >
-            {/* Toggle Icon */}
-            {isCollapsed ? (
-              <ChevronRight className="w-5 h-5" />
-            ) : (
-              <>
-                <ChevronLeft className="w-5 h-5" />
-                <span className="text-sm font-medium">Collapse</span>
-              </>
-            )}
-          </button>
+  // Load messages when session changes
+  useEffect(() => {
+    if (currentSession) {
+      setMessages(currentSession.messages || []);
+    }
+  }, [currentSession]);
+
+  // Set default provider when API keys load
+  useEffect(() => {
+    if (apiKeys.length > 0 && !apiKeys.find(k => k.provider === selectedProvider)) {
+      setSelectedProvider(apiKeys[0].provider);
+    }
+  }, [apiKeys, selectedProvider]);
+
+  /**
+   * Load all chat sessions for the current user
+   */
+  const loadChatSessions = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      setChatSessions(data || []);
+      
+      // Select first session if available
+      if (data && data.length > 0 && !currentSession) {
+        setCurrentSession(data[0]);
+      }
+
+    } catch (err: any) {
+      setError(err.message);
+      showNotification('Failed to load chat sessions', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Create a new chat session
+   */
+  const createNewSession = async () => {
+    if (!user || !newSessionTitle.trim()) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .insert({
+          user_id: user.id,
+          title: newSessionTitle.trim(),
+          messages: []
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setChatSessions(prev => [data, ...prev]);
+      setCurrentSession(data);
+      setNewSessionTitle('');
+      setShowNewSessionModal(false);
+      showNotification('New chat session created', 'success');
+
+    } catch (err: any) {
+      showNotification('Failed to create chat session', 'error');
+    }
+  };
+
+  /**
+   * Send a message to AI
+   */
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || !currentSession || sending) return;
+
+    const apiKey = apiKeys.find(key => key.provider === selectedProvider);
+    if (!apiKey) {
+      showNotification(`No API key found for ${selectedProvider}`, 'error');
+      return;
+    }
+
+    setSending(true);
+
+    // Add user message
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: inputMessage,
+      role: 'user',
+      timestamp: new Date().toISOString(),
+      provider: selectedProvider
+    };
+
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setInputMessage('');
+
+    try {
+      // Simulate AI response (replace with actual API call)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: `This is a simulated response from ${selectedProvider}. In production, this would connect to the actual AI API using your stored API key. The response would be generated based on your message: "${userMessage.content}"`,
+        role: 'assistant',
+        timestamp: new Date().toISOString(),
+        provider: selectedProvider
+      };
+
+      const finalMessages = [...updatedMessages, aiMessage];
+      setMessages(finalMessages);
+
+      // Save to database
+      await supabase
+        .from('chat_sessions')
+        .update({
+          messages: finalMessages,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentSession.id);
+
+      // Update current session in state
+      setCurrentSession(prev => prev ? { ...prev, messages: finalMessages, updated_at: new Date().toISOString() } : null);
+
+    } catch (err: any) {
+      showNotification('Failed to send message', 'error');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  /**
+   * Delete a chat session
+   */
+  const deleteSession = async (sessionId: string) => {
+    if (!window.confirm('Are you sure you want to delete this chat session? This action cannot be undone.')) return;
+
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) throw error;
+
+      setChatSessions(prev => prev.filter(s => s.id !== sessionId));
+      
+      if (currentSession?.id === sessionId) {
+        const remaining = chatSessions.filter(s => s.id !== sessionId);
+        setCurrentSession(remaining[0] || null);
+      }
+
+      showNotification('Chat session deleted', 'success');
+
+    } catch (err: any) {
+      showNotification('Failed to delete chat session', 'error');
+    }
+  };
+
+  /**
+   * Handle keyboard shortcuts
+   */
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  // Filter sessions based on search
+  const filteredSessions = chatSessions.filter(session =>
+    session.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="text-gray-400 mt-4">Loading chat sessions...</p>
         </div>
       </div>
-    </aside>
+    );
+  }
+
+  return (
+    <div className="h-screen bg-gray-900 flex">
+      {/* Sidebar - Chat Sessions */}
+      <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white">Chat Sessions</h2>
+            <button
+              onClick={() => setShowNewSessionModal(true)}
+              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              title="New chat session"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+          
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search sessions..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+        </div>
+
+        {/* Sessions List */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredSessions.length > 0 ? (
+            <div className="p-2">
+              {filteredSessions.map((session) => (
+                <div
+                  key={session.id}
+                  className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors group ${
+                    currentSession?.id === session.id
+                      ? 'bg-green-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-700'
+                  }`}
+                  onClick={() => setCurrentSession(session)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">{session.title}</h3>
+                      <p className="text-xs opacity-75 mt-1">
+                        {session.messages?.length || 0} messages
+                      </p>
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSession(session.id);
+                        }}
+                        className="p-1 hover:bg-red-600 rounded"
+                        title="Delete session"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 text-center text-gray-400">
+              <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+              <p>No chat sessions found</p>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="text-green-400 hover:text-green-300 text-sm mt-2"
+                >
+                  Clear search
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {currentSession ? (
+          <>
+            {/* Chat Header */}
+            <div className="bg-gray-800 border-b border-gray-700 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-semibold text-white">{currentSession.title}</h1>
+                  <p className="text-gray-400 text-sm">
+                    {messages.length} messages • Last updated {new Date(currentSession.updated_at).toLocaleDateString()}
+                  </p>
+                </div>
+                
+                {/* Provider Selector */}
+                <div className="flex items-center gap-3">
+                  <label className="text-gray-400 text-sm">Provider:</label>
+                  <select
+                    value={selectedProvider}
+                    onChange={(e) => setSelectedProvider(e.target.value as ApiKeyProvider)}
+                    className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    {apiKeys.map(key => (
+                      <option key={key.id} value={key.provider}>{key.provider}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+                >
+                  {/* Avatar */}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    message.role === 'user' ? 'bg-blue-600' : 'bg-gray-600'
+                  }`}>
+                    {message.role === 'user' ? (
+                      <User className="w-4 h-4 text-white" />
+                    ) : (
+                      <Bot className="w-4 h-4 text-white" />
+                    )}
+                  </div>
+
+                  {/* Message Bubble */}
+                  <div className={`max-w-3xl ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
+                    <div className={`inline-block px-4 py-2 rounded-lg ${
+                      message.role === 'user'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-100'
+                    }`}>
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(message.timestamp).toLocaleTimeString()}
+                      {message.provider && ` • ${message.provider}`}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              
+              {sending && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="bg-gray-700 text-gray-100 px-4 py-2 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner size="sm" />
+                      <span>AI is thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Message Input */}
+            <div className="bg-gray-800 border-t border-gray-700 p-4">
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  placeholder="Type your message..."
+                  disabled={sending || apiKeys.length === 0}
+                  className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!inputMessage.trim() || sending || apiKeys.length === 0}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+              
+              {apiKeys.length === 0 && (
+                <p className="text-red-400 text-sm mt-2">
+                  Add an API key to start chatting with AI
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          /* No Session Selected */
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <MessageSquare className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-white mb-2">No Chat Session Selected</h2>
+              <p className="text-gray-400 mb-6">Select a session from the sidebar or create a new one</p>
+              <button
+                onClick={() => setShowNewSessionModal(true)}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Start New Chat
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* New Session Modal */}
+      {showNewSessionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">New Chat Session</h3>
+            <input
+              type="text"
+              value={newSessionTitle}
+              onChange={(e) => setNewSessionTitle(e.target.value)}
+              placeholder="Enter session title..."
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 mb-4"
+              autoFocus
+            />
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Chat Sessions
+            </h2>
+            <button
+              onClick={() => setShowNewSessionModal(true)}
+              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              title="New chat session"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+          
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search sessions..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+        </div>
+
+        {/* Sessions List */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredSessions.length > 0 ? (
+            <div className="p-2">
+              {filteredSessions.map((session) => (
+                <div
+                  key={session.id}
+                  className={`p-3 rounded-lg mb-2 cursor-pointer transition-all duration-200 group ${
+                    currentSession?.id === session.id
+                      ? 'bg-green-600 text-white shadow-lg'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}
+                  onClick={() => setCurrentSession(session)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">{session.title}</h3>
+                      <p className="text-xs opacity-75 mt-1">
+                        {session.messages?.length || 0} messages
+                      </p>
+                      <p className="text-xs opacity-60 mt-1">
+                        {new Date(session.updated_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSession(session.id);
+                        }}
+                        className="p-1 hover:bg-red-600 rounded transition-colors"
+                        title="Delete session"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 text-center text-gray-400">
+              <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+              <p className="font-medium">No chat sessions found</p>
+              {searchQuery ? (
+                <div className="mt-3">
+                  <p className="text-sm mb-2">No sessions match "{searchQuery}"</p>
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="text-green-400 hover:text-green-300 text-sm"
+                  >
+                    Clear search
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm mt-2">Create your first chat session to get started</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {currentSession ? (
+          <>
+            {/* Chat Header */}
+            <div className="bg-gray-800 border-b border-gray-700 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-semibold text-white">{currentSession.title}</h1>
+                  <p className="text-gray-400 text-sm">
+                    {messages.length} messages • Last updated {new Date(currentSession.updated_at).toLocaleDateString()}
+                  </p>
+                </div>
+                
+                {/* Provider Selector */}
+                {apiKeys.length > 0 && (
+                  <div className="flex items-center gap-3">
+                    <label className="text-gray-400 text-sm">Provider:</label>
+                    <select
+                      value={selectedProvider}
+                      onChange={(e) => setSelectedProvider(e.target.value as ApiKeyProvider)}
+                      className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      {apiKeys.map(key => (
+                        <option key={key.id} value={key.provider}>{key.provider}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.length > 0 ? (
+                messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+                  >
+                    {/* Avatar */}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      message.role === 'user' ? 'bg-blue-600' : 'bg-gray-600'
+                    }`}>
+                      {message.role === 'user' ? (
+                        <User className="w-4 h-4 text-white" />
+                      ) : (
+                        <Bot className="w-4 h-4 text-white" />
+                      )}
+                    </div>
+
+                    {/* Message Bubble */}
+                    <div className={`max-w-3xl ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
+                      <div className={`inline-block px-4 py-3 rounded-lg ${
+                        message.role === 'user'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-700 text-gray-100'
+                      }`}>
+                        <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1 px-1">
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                        {message.provider && ` • ${message.provider}`}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <Bot className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-white mb-2">Start a Conversation</h3>
+                    <p className="text-gray-400">Send a message to begin chatting with AI</p>
+                  </div>
+                </div>
+              )}
+              
+              {sending && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="bg-gray-700 text-gray-100 px-4 py-3 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner size="sm" />
+                      <span>AI is thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Message Input */}
+            <div className="bg-gray-800 border-t border-gray-700 p-4">
+              <div className="flex gap-3">
+                <textarea
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder={apiKeys.length > 0 ? "Type your message... (Enter to send, Shift+Enter for new line)" : "Add an API key to start chatting"}
+                  disabled={sending || apiKeys.length === 0}
+                  className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 resize-none"
+                  rows={1}
+                  style={{ minHeight: '48px', maxHeight: '120px' }}
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!inputMessage.trim() || sending || apiKeys.length === 0}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {sending ? (
+                    <LoadingSpinner size="sm" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+              
+              {apiKeys.length === 0 && (
+                <p className="text-red-400 text-sm mt-2 flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>Add an API key in settings to start chatting with AI</span>
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          /* No Session Selected */
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <MessageSquare className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-white mb-2">No Chat Session Selected</h2>
+              <p className="text-gray-400 mb-6">Select a session from the sidebar or create a new one</p>
+              <button
+                onClick={() => setShowNewSessionModal(true)}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 mx-auto"
+              >
+                <Plus className="w-4 h-4" />
+                Start New Chat
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* New Session Modal */}
+      {showNewSessionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">New Chat Session</h3>
+              <button
+                onClick={() => {
+                  setShowNewSessionModal(false);
+                  setNewSessionTitle('');
+                }}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="sessionTitle" className="block text-sm font-medium text-gray-300 mb-2">
+                  Session Title
+                </label>
+                <input
+                  id="sessionTitle"
+                  type="text"
+                  value={newSessionTitle}
+                  onChange={(e) => setNewSessionTitle(e.target.value)}
+                  placeholder="Enter session title..."
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  autoFocus
+                  maxLength={100}
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowNewSessionModal(false);
+                    setNewSessionTitle('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createNewSession}
+                  disabled={!newSessionTitle.trim()}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Create Session
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
-
-export default SidebarNavigation;

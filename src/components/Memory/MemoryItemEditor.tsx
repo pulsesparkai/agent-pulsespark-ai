@@ -1,578 +1,972 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Save, 
-  X, 
-  Plus, 
-  Tag, 
-  FileText, 
-  AlertCircle, 
-  CheckCircle,
-  Brain
-} from 'lucide-react';
-import { useMemoryContext } from '../../contexts/MemoryContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { useProject } from '../../contexts/ProjectContext';
+import { useApiKeys } from '../../contexts/ApiKeysContext';
+import { useNotification } from '../../contexts/NotificationContext';
+import { supabase } from '../../lib/supabase';
 import { LoadingSpinner } from '../Shared/LoadingSpinner';
-import { MemoryItem } from '../../hooks/useMemory';
-
-interface MemoryItemEditorProps {
-  memory?: MemoryItem | null;
-  onSave?: (memory: MemoryItem) => void;
-  onCancel?: () => void;
-  className?: string;
-}
+import { 
+  MessageSquare, 
+  Plus, 
+  Send, 
+  Bot, 
+  User, 
+  Trash2,
+  Search,
+  X
+import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useApiKeys } from '../../contexts/ApiKeysContext';
+import { useNotification } from '../../contexts/NotificationContext';
+import { supabase } from '../../lib/supabase';
+import { LoadingSpinner } from '../Shared/LoadingSpinner';
+import { 
+  MessageSquare, 
+  Plus, 
+  Send, 
+  Bot, 
+  User, 
+  Trash2,
+  Edit2,
+  Search,
+  Filter
+} from 'lucide-react';
+import { ChatMessage, ChatSession, ApiKeyProvider } from '../../types';
 
 /**
- * MemoryItemEditor Component
+ * ChatPage Component
  * 
- * Provides a form interface for creating and editing memory items.
- * Features rich text input, tag management, and metadata configuration.
- * Integrates with the custom memory system API for intelligent storage.
+ * Complete chat management interface with session management,
+ * message history, and AI provider integration.
  */
-export const MemoryItemEditor: React.FC<MemoryItemEditorProps> = ({
-  memory,
-  onSave,
-  onCancel,
-  className = ''
-}) => {
-  // Context and authentication
+export const ChatPage: React.FC = () => {
   const { user } = useAuth();
-  const { currentProject } = useProject();
-  const { 
-    addMemory, 
-    updateMemory, 
-    loading, 
-    error, 
-    clearError 
-  } = useMemoryContext();
+  const { apiKeys } = useApiKeys();
+  const { showNotification } = useNotification();
 
-  // Form state management
-  const [text, setText] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [newTag, setNewTag] = useState('');
-  const [metadata, setMetadata] = useState({
-    type: 'note' as 'chat' | 'code' | 'note' | 'document',
-    importance: 1,
-    source: 'user_input'
-  });
+  // State management
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
-  // UI state management
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<{
-    text?: string;
-    tags?: string;
-  }>({});
+  // UI state
+  const [inputMessage, setInputMessage] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState<ApiKeyProvider>('OpenAI');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showNewSessionModal, setShowNewSessionModal] = useState(false);
+  const [newSessionTitle, setNewSessionTitle] = useState('');
 
-  // Form validation constants
-  const MAX_TEXT_LENGTH = 10000;
-  const MIN_TEXT_LENGTH = 5;
-  const MAX_TAGS = 20;
-  const MAX_TAG_LENGTH = 50;
-
-  // Editing mode detection
-  const isEditing = !!memory;
-
-  /**
-   * Initialize form with existing memory data
-   * Populates form fields when editing existing memory
-   */
+  // Load chat sessions on mount
   useEffect(() => {
-    if (memory) {
-      setText(memory.text);
-      setTags(memory.tags);
-      setMetadata({
-        type: memory.metadata.type || 'note',
-        importance: memory.metadata.importance || 1,
-        source: memory.metadata.source || 'user_input'
-      });
+    if (user) {
+      loadChatSessions();
     }
-  }, [memory]);
+  }, [user]);
+
+  // Load messages when session changes
+  useEffect(() => {
+    if (currentSession) {
+      setMessages(currentSession.messages || []);
+    }
+  }, [currentSession]);
 
   /**
-   * Validate form inputs
-   * Returns validation errors or empty object if valid
+   * Load all chat sessions for the current user
    */
-  const validateForm = useCallback((): { text?: string; tags?: string } => {
-    const errors: { text?: string; tags?: string } = {};
-
-    // Text validation
-    if (!text.trim()) {
-      errors.text = 'Memory text is required';
-    } else if (text.trim().length < MIN_TEXT_LENGTH) {
-      errors.text = `Memory text must be at least ${MIN_TEXT_LENGTH} characters`;
-    } else if (text.length > MAX_TEXT_LENGTH) {
-      errors.text = `Memory text must be less than ${MAX_TEXT_LENGTH} characters`;
-    }
-
-    // Tags validation
-    if (tags.length > MAX_TAGS) {
-      errors.tags = `Cannot have more than ${MAX_TAGS} tags`;
-    }
-
-    const invalidTags = tags.filter(tag => tag.length > MAX_TAG_LENGTH);
-    if (invalidTags.length > 0) {
-      errors.tags = `Tags must be less than ${MAX_TAG_LENGTH} characters`;
-    }
-
-    return errors;
-  }, [text, tags]);
-
-  /**
-   * Handle form submission
-   * Validates input and calls appropriate API method
-   */
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!user) {
-      return;
-    }
-
-    // Clear previous errors
-    setValidationErrors({});
-    clearError();
-
-    // Validate form
-    const errors = validateForm();
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-
-    setIsSubmitting(true);
+  const loadChatSessions = async () => {
+    if (!user) return;
 
     try {
-      const memoryData = {
-        text: text.trim(),
-        metadata: {
-          ...metadata,
-          projectId: currentProject?.id,
-          editedAt: new Date().toISOString()
-        },
-        tags: tags.filter(tag => tag.trim().length > 0)
+      setLoading(true);
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      setChatSessions(data || []);
+      
+      // Select first session if available
+      if (data && data.length > 0 && !currentSession) {
+        setCurrentSession(data[0]);
+      }
+
+    } catch (err: any) {
+      setError(err.message);
+      showNotification('Failed to load chat sessions', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Create a new chat session
+   */
+  const createNewSession = async () => {
+    if (!user || !newSessionTitle.trim()) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .insert({
+          user_id: user.id,
+          title: newSessionTitle.trim(),
+          messages: []
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setChatSessions(prev => [data, ...prev]);
+      setCurrentSession(data);
+      setNewSessionTitle('');
+      setShowNewSessionModal(false);
+      showNotification('New chat session created', 'success');
+
+    } catch (err: any) {
+      showNotification('Failed to create chat session', 'error');
+    }
+  };
+
+  /**
+   * Send a message to AI
+   */
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || !currentSession || sending) return;
+
+    const apiKey = apiKeys.find(key => key.provider === selectedProvider);
+    if (!apiKey) {
+      showNotification(`No API key found for ${selectedProvider}`, 'error');
+      return;
+    }
+
+    setSending(true);
+
+    // Add user message
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: inputMessage,
+      role: 'user',
+      timestamp: new Date().toISOString(),
+      provider: selectedProvider
+    };
+
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setInputMessage('');
+
+    try {
+      // Simulate AI response (replace with actual API call)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: `This is a simulated response from ${selectedProvider}. In production, this would be the actual AI response.`,
+        role: 'assistant',
+        timestamp: new Date().toISOString(),
+        provider: selectedProvider
       };
 
-      if (isEditing && memory) {
-        // Update existing memory
-        await updateMemory(memory.id, memoryData);
-      } else {
-        // Create new memory
-        await addMemory(memoryData.text, memoryData.metadata, memoryData.tags);
-      }
+      const finalMessages = [...updatedMessages, aiMessage];
+      setMessages(finalMessages);
 
-      // Show success feedback
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-
-      // Call success callback if provided
-      if (onSave) {
-        // Create a mock updated memory for callback
-        const updatedMemory: MemoryItem = {
-          id: memory?.id || 'new-memory',
-          text: memoryData.text,
-          metadata: memoryData.metadata,
-          tags: memoryData.tags,
-          created_at: memory?.created_at || new Date().toISOString(),
+      // Save to database
+      await supabase
+        .from('chat_sessions')
+        .update({
+          messages: finalMessages,
           updated_at: new Date().toISOString()
-        };
-        onSave(updatedMemory);
-      }
+        })
+        .eq('id', currentSession.id);
 
-      // Reset form if creating new memory
-      if (!isEditing) {
-        setText('');
-        setTags([]);
-        setNewTag('');
-        setMetadata({
-          type: 'note',
-          importance: 1,
-          source: 'user_input'
-        });
-      }
-
-    } catch (err) {
-      console.error('Failed to save memory:', err);
+    } catch (err: any) {
+      showNotification('Failed to send message', 'error');
     } finally {
-      setIsSubmitting(false);
+      setSending(false);
     }
-  }, [
-    user,
-    currentProject,
-    text,
-    tags,
-    metadata,
-    memory,
-    isEditing,
-    validateForm,
-    addMemory,
-    updateMemory,
-    clearError,
-    onSave
-  ]);
+  };
 
   /**
-   * Handle adding new tag
-   * Validates and adds tag to the tags array
+   * Delete a chat session
    */
-  const handleAddTag = useCallback(() => {
-    const trimmedTag = newTag.trim().toLowerCase();
-    
-    if (!trimmedTag) return;
-    
-    if (trimmedTag.length > MAX_TAG_LENGTH) {
-      setValidationErrors(prev => ({
-        ...prev,
-        tags: `Tag must be less than ${MAX_TAG_LENGTH} characters`
-      }));
-      return;
-    }
-    
-    if (tags.includes(trimmedTag)) {
-      setValidationErrors(prev => ({
-        ...prev,
-        tags: 'Tag already exists'
-      }));
-      return;
-    }
-    
-    if (tags.length >= MAX_TAGS) {
-      setValidationErrors(prev => ({
-        ...prev,
-        tags: `Cannot have more than ${MAX_TAGS} tags`
-      }));
-      return;
-    }
+  const deleteSession = async (sessionId: string) => {
+    if (!window.confirm('Are you sure you want to delete this chat session?')) return;
 
-    setTags(prev => [...prev, trimmedTag]);
-    setNewTag('');
-    setValidationErrors(prev => ({ ...prev, tags: undefined }));
-  }, [newTag, tags]);
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .delete()
+        .eq('id', sessionId);
 
-  /**
-   * Handle removing tag
-   * Removes tag from the tags array
-   */
-  const handleRemoveTag = useCallback((tagToRemove: string) => {
-    setTags(prev => prev.filter(tag => tag !== tagToRemove));
-    setValidationErrors(prev => ({ ...prev, tags: undefined }));
-  }, []);
+      if (error) throw error;
 
-  /**
-   * Handle tag input key press
-   * Adds tag on Enter key press
-   */
-  const handleTagKeyPress = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddTag();
+      setChatSessions(prev => prev.filter(s => s.id !== sessionId));
+      
+      if (currentSession?.id === sessionId) {
+        const remaining = chatSessions.filter(s => s.id !== sessionId);
+        setCurrentSession(remaining[0] || null);
+      }
+
+      showNotification('Chat session deleted', 'success');
+
+    } catch (err: any) {
+      showNotification('Failed to delete chat session', 'error');
     }
-  }, [handleAddTag]);
+  };
 
-  /**
-   * Handle text input change
-   * Updates text state and clears validation errors
-   */
-  const handleTextChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setText(e.target.value);
-    if (validationErrors.text) {
-      setValidationErrors(prev => ({ ...prev, text: undefined }));
-    }
-  }, [validationErrors.text]);
+  // Filter sessions based on search
+  const filteredSessions = chatSessions.filter(session =>
+    session.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  /**
-   * Handle cancel action
-   * Resets form or calls cancel callback
-   */
-  const handleCancel = useCallback(() => {
-    if (onCancel) {
-      onCancel();
-    } else {
-      // Reset form
-      setText('');
-      setTags([]);
-      setNewTag('');
-      setValidationErrors({});
-      clearError();
-    }
-  }, [onCancel, clearError]);
-
-  if (!user) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-gray-500">Please sign in to manage memories.</p>
+      <div className="h-screen bg-gray-900 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  const { user } = useAuth();
+  const { apiKeys } = useApiKeys();
+  const { showNotification } = useNotification();
+
+  // State management
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // UI state
+  const [inputMessage, setInputMessage] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState<ApiKeyProvider>('OpenAI');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showNewSessionModal, setShowNewSessionModal] = useState(false);
+  const [newSessionTitle, setNewSessionTitle] = useState('');
+
+  // Load chat sessions on mount
+  useEffect(() => {
+    if (user) {
+      loadChatSessions();
+    }
+  }, [user]);
+
+  // Load messages when session changes
+  useEffect(() => {
+    if (currentSession) {
+      setMessages(currentSession.messages || []);
+    }
+  }, [currentSession]);
+
+  // Set default provider when API keys load
+  useEffect(() => {
+    if (apiKeys.length > 0 && !apiKeys.find(k => k.provider === selectedProvider)) {
+      setSelectedProvider(apiKeys[0].provider);
+    }
+  }, [apiKeys, selectedProvider]);
+
+  /**
+   * Load all chat sessions for the current user
+   */
+  const loadChatSessions = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      setChatSessions(data || []);
+      
+      // Select first session if available
+      if (data && data.length > 0 && !currentSession) {
+        setCurrentSession(data[0]);
+      }
+
+    } catch (err: any) {
+      setError(err.message);
+      showNotification('Failed to load chat sessions', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Create a new chat session
+   */
+  const createNewSession = async () => {
+    if (!user || !newSessionTitle.trim()) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .insert({
+          user_id: user.id,
+          title: newSessionTitle.trim(),
+          messages: []
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setChatSessions(prev => [data, ...prev]);
+      setCurrentSession(data);
+      setNewSessionTitle('');
+      setShowNewSessionModal(false);
+      showNotification('New chat session created', 'success');
+
+    } catch (err: any) {
+      showNotification('Failed to create chat session', 'error');
+    }
+  };
+
+  /**
+   * Send a message to AI
+   */
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || !currentSession || sending) return;
+
+    const apiKey = apiKeys.find(key => key.provider === selectedProvider);
+    if (!apiKey) {
+      showNotification(`No API key found for ${selectedProvider}`, 'error');
+      return;
+    }
+
+    setSending(true);
+
+    // Add user message
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: inputMessage,
+      role: 'user',
+      timestamp: new Date().toISOString(),
+      provider: selectedProvider
+    };
+
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setInputMessage('');
+
+    try {
+      // Simulate AI response (replace with actual API call)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: `This is a simulated response from ${selectedProvider}. In production, this would connect to the actual AI API using your stored API key. The response would be generated based on your message: "${userMessage.content}"`,
+        role: 'assistant',
+        timestamp: new Date().toISOString(),
+        provider: selectedProvider
+      };
+
+      const finalMessages = [...updatedMessages, aiMessage];
+      setMessages(finalMessages);
+
+      // Save to database
+      await supabase
+        .from('chat_sessions')
+        .update({
+          messages: finalMessages,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentSession.id);
+
+      // Update current session in state
+      setCurrentSession(prev => prev ? { ...prev, messages: finalMessages, updated_at: new Date().toISOString() } : null);
+
+    } catch (err: any) {
+      showNotification('Failed to send message', 'error');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  /**
+   * Delete a chat session
+   */
+  const deleteSession = async (sessionId: string) => {
+    if (!window.confirm('Are you sure you want to delete this chat session? This action cannot be undone.')) return;
+
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) throw error;
+
+      setChatSessions(prev => prev.filter(s => s.id !== sessionId));
+      
+      if (currentSession?.id === sessionId) {
+        const remaining = chatSessions.filter(s => s.id !== sessionId);
+        setCurrentSession(remaining[0] || null);
+      }
+
+      showNotification('Chat session deleted', 'success');
+
+    } catch (err: any) {
+      showNotification('Failed to delete chat session', 'error');
+    }
+  };
+
+  /**
+   * Handle keyboard shortcuts
+   */
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  // Filter sessions based on search
+  const filteredSessions = chatSessions.filter(session =>
+    session.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="text-gray-400 mt-4">Loading chat sessions...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={`bg-white rounded-xl shadow-lg p-6 ${className}`}>
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-          <Brain className="w-5 h-5 text-green-600" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            {isEditing ? 'Edit Memory' : 'Add New Memory'}
-          </h2>
-          <p className="text-gray-600">
-            {isEditing ? 'Update your memory entry' : 'Store knowledge for future reference'}
-          </p>
-        </div>
-      </div>
-
-      {/* Success Message */}
-      {showSuccess && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-          <p className="text-green-700 font-medium">
-            Memory {isEditing ? 'updated' : 'created'} successfully!
-          </p>
-        </div>
-      )}
-
-      {/* Error Display */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-          <div className="flex-1">
-            <p className="text-red-700 font-medium">Error saving memory</p>
-            <p className="text-red-600 text-sm">{error}</p>
-          </div>
-          <button
-            onClick={clearError}
-            className="text-red-500 hover:text-red-700"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Memory Form */}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        
-        {/* Text Content Field */}
-        <div>
-          <label htmlFor="memoryText" className="block text-sm font-semibold text-gray-700 mb-2">
-            Memory Content *
-          </label>
-          <div className="relative">
-            <textarea
-              id="memoryText"
-              value={text}
-              onChange={handleTextChange}
-              placeholder="Enter the knowledge or information you want to remember..."
-              disabled={isSubmitting}
-              className={`
-                w-full px-4 py-3 border rounded-lg resize-vertical transition-colors
-                focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent
-                disabled:opacity-50 disabled:cursor-not-allowed min-h-32
-                ${validationErrors.text 
-                  ? 'border-red-300 bg-red-50 focus:ring-red-500' 
-                  : 'border-gray-300 hover:border-gray-400'
-                }
-              `}
-              rows={6}
-              maxLength={MAX_TEXT_LENGTH}
-              aria-describedby={validationErrors.text ? 'text-error' : 'text-help'}
-            />
-            <div className="absolute bottom-3 right-3 text-xs text-gray-400">
-              {text.length}/{MAX_TEXT_LENGTH}
-            </div>
-          </div>
-          
-          {validationErrors.text && (
-            <p id="text-error" className="mt-2 text-sm text-red-600 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" />
-              {validationErrors.text}
-            </p>
-          )}
-          
-          <p id="text-help" className="mt-1 text-sm text-gray-500">
-            Describe the knowledge, code snippet, or information you want to store for future reference.
-          </p>
-        </div>
-
-        {/* Memory Type and Importance */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Memory Type */}
-          <div>
-            <label htmlFor="memoryType" className="block text-sm font-semibold text-gray-700 mb-2">
-              Memory Type
-            </label>
-            <select
-              id="memoryType"
-              value={metadata.type}
-              onChange={(e) => setMetadata(prev => ({ 
-                ...prev, 
-                type: e.target.value as typeof metadata.type 
-              }))}
-              disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50"
-            >
-              <option value="note">Note</option>
-              <option value="code">Code</option>
-              <option value="chat">Chat</option>
-              <option value="document">Document</option>
-            </select>
-          </div>
-
-          {/* Importance Level */}
-          <div>
-            <label htmlFor="importance" className="block text-sm font-semibold text-gray-700 mb-2">
-              Importance Level
-            </label>
-            <select
-              id="importance"
-              value={metadata.importance}
-              onChange={(e) => setMetadata(prev => ({ 
-                ...prev, 
-                importance: parseInt(e.target.value) 
-              }))}
-              disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50"
-            >
-              <option value={1}>1 - Low</option>
-              <option value={2}>2 - Medium</option>
-              <option value={3}>3 - High</option>
-              <option value={4}>4 - Very High</option>
-              <option value={5}>5 - Critical</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Tags Section */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Tags
-          </label>
-          
-          {/* Existing Tags */}
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
-              {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                >
-                  <Tag className="w-3 h-3" />
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTag(tag)}
-                    disabled={isSubmitting}
-                    className="ml-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                    aria-label={`Remove ${tag} tag`}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Add New Tag */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              onKeyPress={handleTagKeyPress}
-              placeholder="Add a tag..."
-              disabled={isSubmitting || tags.length >= MAX_TAGS}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50"
-              maxLength={MAX_TAG_LENGTH}
-            />
+    <div className="h-screen bg-gray-900 flex">
+      {/* Sidebar - Chat Sessions */}
+      <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white">Chat Sessions</h2>
             <button
-              type="button"
-              onClick={handleAddTag}
-              disabled={!newTag.trim() || isSubmitting || tags.length >= MAX_TAGS}
-              className="flex items-center gap-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              onClick={() => setShowNewSessionModal(true)}
+              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              title="New chat session"
             >
               <Plus className="w-4 h-4" />
-              Add
             </button>
           </div>
           
-          {validationErrors.tags && (
-            <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" />
-              {validationErrors.tags}
-            </p>
-          )}
-          
-          <p className="mt-1 text-sm text-gray-500">
-            Add tags to help categorize and find this memory later. Press Enter to add a tag.
-          </p>
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search sessions..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
         </div>
 
-        {/* Project Context */}
-        {currentProject && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-900">
-                This memory will be associated with project: {currentProject.name}
-              </span>
+        {/* Sessions List */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredSessions.length > 0 ? (
+            <div className="p-2">
+              {filteredSessions.map((session) => (
+                <div
+                  key={session.id}
+                  className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors group ${
+                    currentSession?.id === session.id
+                      ? 'bg-green-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-700'
+                  }`}
+                  onClick={() => setCurrentSession(session)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">{session.title}</h3>
+                      <p className="text-xs opacity-75 mt-1">
+                        {session.messages?.length || 0} messages
+                      </p>
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSession(session.id);
+                        }}
+                        className="p-1 hover:bg-red-600 rounded"
+                        title="Delete session"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 text-center text-gray-400">
+              <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+              <p>No chat sessions found</p>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="text-green-400 hover:text-green-300 text-sm mt-2"
+                >
+                  Clear search
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {currentSession ? (
+          <>
+            {/* Chat Header */}
+            <div className="bg-gray-800 border-b border-gray-700 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-semibold text-white">{currentSession.title}</h1>
+                  <p className="text-gray-400 text-sm">
+                    {messages.length} messages • Last updated {new Date(currentSession.updated_at).toLocaleDateString()}
+                  </p>
+                </div>
+                
+                {/* Provider Selector */}
+                <div className="flex items-center gap-3">
+                  <label className="text-gray-400 text-sm">Provider:</label>
+                  <select
+                    value={selectedProvider}
+                    onChange={(e) => setSelectedProvider(e.target.value as ApiKeyProvider)}
+                    className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    {apiKeys.map(key => (
+                      <option key={key.id} value={key.provider}>{key.provider}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+                >
+                  {/* Avatar */}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    message.role === 'user' ? 'bg-blue-600' : 'bg-gray-600'
+                  }`}>
+                    {message.role === 'user' ? (
+                      <User className="w-4 h-4 text-white" />
+                    ) : (
+                      <Bot className="w-4 h-4 text-white" />
+                    )}
+                  </div>
+
+                  {/* Message Bubble */}
+                  <div className={`max-w-3xl ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
+                    <div className={`inline-block px-4 py-2 rounded-lg ${
+                      message.role === 'user'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-100'
+                    }`}>
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(message.timestamp).toLocaleTimeString()}
+                      {message.provider && ` • ${message.provider}`}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              
+              {sending && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="bg-gray-700 text-gray-100 px-4 py-2 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner size="sm" />
+                      <span>AI is thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Message Input */}
+            <div className="bg-gray-800 border-t border-gray-700 p-4">
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  placeholder="Type your message..."
+                  disabled={sending || apiKeys.length === 0}
+                  className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!inputMessage.trim() || sending || apiKeys.length === 0}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+              
+              {apiKeys.length === 0 && (
+                <p className="text-red-400 text-sm mt-2">
+                  Add an API key to start chatting with AI
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          /* No Session Selected */
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <MessageSquare className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-white mb-2">No Chat Session Selected</h2>
+              <p className="text-gray-400 mb-6">Select a session from the sidebar or create a new one</p>
+              <button
+                onClick={() => setShowNewSessionModal(true)}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Start New Chat
+              </button>
             </div>
           </div>
         )}
+      </div>
 
-        {/* Form Actions */}
-        <div className="flex gap-4 pt-6 border-t border-gray-200">
-          <button
-            type="submit"
-            disabled={isSubmitting || !text.trim()}
-            className="
-              flex-1 flex justify-center items-center gap-3 py-3 px-6
-              bg-gradient-to-r from-green-600 to-green-700 
-              hover:from-green-500 hover:to-green-600
-              text-white font-semibold rounded-lg shadow-sm
-              transform transition-all duration-200 
-              hover:scale-[1.02] hover:shadow-md
-              focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2
-              disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
-              active:scale-[0.98]
-            "
-          >
-            {isSubmitting ? (
-              <>
-                <LoadingSpinner size="sm" />
-                <span>{isEditing ? 'Updating...' : 'Saving...'}</span>
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                <span>{isEditing ? 'Update Memory' : 'Save Memory'}</span>
-              </>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isSubmitting}
-            className="
-              flex-1 flex justify-center items-center gap-3 py-3 px-6
-              bg-gray-100 text-gray-700 font-semibold rounded-lg
-              hover:bg-gray-200 transition-all duration-200
-              focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2
-              disabled:opacity-50 disabled:cursor-not-allowed
-            "
-          >
-            <X className="w-4 h-4" />
-            <span>Cancel</span>
-          </button>
+      {/* New Session Modal */}
+      {showNewSessionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">New Chat Session</h3>
+            <input
+              type="text"
+              value={newSessionTitle}
+              onChange={(e) => setNewSessionTitle(e.target.value)}
+              placeholder="Enter session title..."
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 mb-4"
+              autoFocus
+            />
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Chat Sessions
+            </h2>
+            <button
+              onClick={() => setShowNewSessionModal(true)}
+              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              title="New chat session"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+          
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search sessions..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
         </div>
 
-        {/* Form Footer */}
-        <div className="pt-4 text-center">
-          <p className="text-sm text-gray-500">
-            * Required fields. Your memory will be stored securely and searchable using AI.
-          </p>
+        {/* Sessions List */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredSessions.length > 0 ? (
+            <div className="p-2">
+              {filteredSessions.map((session) => (
+                <div
+                  key={session.id}
+                  className={`p-3 rounded-lg mb-2 cursor-pointer transition-all duration-200 group ${
+                    currentSession?.id === session.id
+                      ? 'bg-green-600 text-white shadow-lg'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}
+                  onClick={() => setCurrentSession(session)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">{session.title}</h3>
+                      <p className="text-xs opacity-75 mt-1">
+                        {session.messages?.length || 0} messages
+                      </p>
+                      <p className="text-xs opacity-60 mt-1">
+                        {new Date(session.updated_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSession(session.id);
+                        }}
+                        className="p-1 hover:bg-red-600 rounded transition-colors"
+                        title="Delete session"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 text-center text-gray-400">
+              <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+              <p className="font-medium">No chat sessions found</p>
+              {searchQuery ? (
+                <div className="mt-3">
+                  <p className="text-sm mb-2">No sessions match "{searchQuery}"</p>
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="text-green-400 hover:text-green-300 text-sm"
+                  >
+                    Clear search
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm mt-2">Create your first chat session to get started</p>
+              )}
+            </div>
+          )}
         </div>
-      </form>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {currentSession ? (
+          <>
+            {/* Chat Header */}
+            <div className="bg-gray-800 border-b border-gray-700 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-semibold text-white">{currentSession.title}</h1>
+                  <p className="text-gray-400 text-sm">
+                    {messages.length} messages • Last updated {new Date(currentSession.updated_at).toLocaleDateString()}
+                  </p>
+                </div>
+                
+                {/* Provider Selector */}
+                {apiKeys.length > 0 && (
+                  <div className="flex items-center gap-3">
+                    <label className="text-gray-400 text-sm">Provider:</label>
+                    <select
+                      value={selectedProvider}
+                      onChange={(e) => setSelectedProvider(e.target.value as ApiKeyProvider)}
+                      className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      {apiKeys.map(key => (
+                        <option key={key.id} value={key.provider}>{key.provider}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.length > 0 ? (
+                messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+                  >
+                    {/* Avatar */}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      message.role === 'user' ? 'bg-blue-600' : 'bg-gray-600'
+                    }`}>
+                      {message.role === 'user' ? (
+                        <User className="w-4 h-4 text-white" />
+                      ) : (
+                        <Bot className="w-4 h-4 text-white" />
+                      )}
+                    </div>
+
+                    {/* Message Bubble */}
+                    <div className={`max-w-3xl ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
+                      <div className={`inline-block px-4 py-3 rounded-lg ${
+                        message.role === 'user'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-700 text-gray-100'
+                      }`}>
+                        <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1 px-1">
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                        {message.provider && ` • ${message.provider}`}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <Bot className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-white mb-2">Start a Conversation</h3>
+                    <p className="text-gray-400">Send a message to begin chatting with AI</p>
+                  </div>
+                </div>
+              )}
+              
+              {sending && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="bg-gray-700 text-gray-100 px-4 py-3 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner size="sm" />
+                      <span>AI is thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Message Input */}
+            <div className="bg-gray-800 border-t border-gray-700 p-4">
+              <div className="flex gap-3">
+                <textarea
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder={apiKeys.length > 0 ? "Type your message... (Enter to send, Shift+Enter for new line)" : "Add an API key to start chatting"}
+                  disabled={sending || apiKeys.length === 0}
+                  className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 resize-none"
+                  rows={1}
+                  style={{ minHeight: '48px', maxHeight: '120px' }}
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!inputMessage.trim() || sending || apiKeys.length === 0}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {sending ? (
+                    <LoadingSpinner size="sm" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+              
+              {apiKeys.length === 0 && (
+                <p className="text-red-400 text-sm mt-2 flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>Add an API key in settings to start chatting with AI</span>
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          /* No Session Selected */
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <MessageSquare className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-white mb-2">No Chat Session Selected</h2>
+              <p className="text-gray-400 mb-6">Select a session from the sidebar or create a new one</p>
+              <button
+                onClick={() => setShowNewSessionModal(true)}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 mx-auto"
+              >
+                <Plus className="w-4 h-4" />
+                Start New Chat
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* New Session Modal */}
+      {showNewSessionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">New Chat Session</h3>
+              <button
+                onClick={() => {
+                  setShowNewSessionModal(false);
+                  setNewSessionTitle('');
+                }}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="sessionTitle" className="block text-sm font-medium text-gray-300 mb-2">
+                  Session Title
+                </label>
+                <input
+                  id="sessionTitle"
+                  type="text"
+                  value={newSessionTitle}
+                  onChange={(e) => setNewSessionTitle(e.target.value)}
+                  placeholder="Enter session title..."
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  autoFocus
+                  maxLength={100}
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowNewSessionModal(false);
+                    setNewSessionTitle('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createNewSession}
+                  disabled={!newSessionTitle.trim()}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Create Session
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

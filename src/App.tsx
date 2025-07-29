@@ -1,509 +1,972 @@
-import React, { useState } from 'react';
-import ChatWindow from './components/Chat/ChatWindow';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { NotificationProvider } from './contexts/NotificationContext';
-import { ApiKeysProvider } from './contexts/ApiKeysContext';
-import { ChatProvider } from './contexts/ChatContext';
-import { ProjectProvider } from './contexts/ProjectContext';
-import { GitHubProvider } from './contexts/GitHubContext';
-import { AIProviderProvider } from './contexts/AIProviderContext';
-import { MemoryProvider } from './contexts/MemoryContext';
-import { FeedbackProvider } from './contexts/FeedbackContext';
-import { MemoryPage } from './components/Memory';
-import { LoginForm } from './components/Auth/LoginForm';
-import SignupForm from './components/Auth/SignupForm';
-import SignupPage from './components/Auth/SignupPage';
-import { Dashboard } from './components/Dashboard/Dashboard';
-import { ApiKeysPage } from './components/ApiKeys/ApiKeysPage';
-import { ChatPage } from './components/Chat/ChatPage';
-import { ChatInterface } from './components/Chat/ChatInterface';
-import { ChatSidebar } from './components/Chat/ChatSidebar';
-import CodeEditorPage from './components/CodeEditor/CodeEditorPage';
-import { ProjectsList } from './components/Projects/ProjectsList';
-import { ProjectDashboard } from './components/Projects/ProjectDashboard';
-import { ProjectFileExplorer } from './components/Projects/ProjectFileExplorer';
-import ProjectSettingsPanel from './components/Projects/ProjectSettingsPanel';
-import ChatSettingsPanel from './components/Chat/ChatSettingsPanel';
-import UserProfileSettings from './components/User/UserProfileSettings';
-import { AIAnalyticsDashboard } from './components/Dashboard/AIAnalyticsDashboard';
-import { ChatMessageBubble } from './components/Chat/ChatMessageBubble';
-import ChatInputBar from './components/Chat/ChatInputBar';
-import { PlaceholderPage } from './components/Shared/PlaceholderPage';
-import { SidebarNavigation } from './components/Layout/SidebarNavigation';
-import { AppHeader } from './components/Layout/AppHeader';
-import { LoadingSpinner } from './components/Shared/LoadingSpinner';
-import UserNotificationsPanel from './components/User/UserNotificationsPanel';
-import { ActivityFeed } from './components/User/ActivityFeed';
-import SubscriptionBillingPage from './components/Billing/SubscriptionBillingPage';
-import PaymentMethodForm from './components/Billing/PaymentMethodForm';
-import { SupportFAQPage } from './components/Support/SupportFAQPage';
-import { AdminDashboard } from './components/Admin/AdminDashboard';
-import UserRoleManagement from './components/Admin/UserRoleManagement';
-import ChatNotifications from './components/Chat/ChatNotifications';
-import { ErrorBoundary } from './components/Shared/ErrorBoundary';
-import ConfirmationModal from './components/Shared/ConfirmationModal';
-import { FeedbackForm } from './components/Feedback/FeedbackForm';
-import { Settings } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useApiKeys } from '../../contexts/ApiKeysContext';
+import { useNotification } from '../../contexts/NotificationContext';
+import { supabase } from '../../lib/supabase';
+import { LoadingSpinner } from '../Shared/LoadingSpinner';
+import { 
+  MessageSquare, 
+  Plus, 
+  Send, 
+  Bot, 
+  User, 
+  Trash2,
+  Search,
+  X
+import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useApiKeys } from '../../contexts/ApiKeysContext';
+import { useNotification } from '../../contexts/NotificationContext';
+import { supabase } from '../../lib/supabase';
+import { LoadingSpinner } from '../Shared/LoadingSpinner';
+import { 
+  MessageSquare, 
+  Plus, 
+  Send, 
+  Bot, 
+  User, 
+  Trash2,
+  Edit2,
+  Search,
+  Filter
+} from 'lucide-react';
+import { ChatMessage, ChatSession, ApiKeyProvider } from '../../types';
 
-// ConfirmationModal Demo component
-const ConfirmationModalDemo: React.FC<{ type: 'warning' | 'danger' | 'info' }> = ({ type }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+/**
+ * ChatPage Component
+ * 
+ * Complete chat management interface with session management,
+ * message history, and AI provider integration.
+ */
+export const ChatPage: React.FC = () => {
+  const { user } = useAuth();
+  const { apiKeys } = useApiKeys();
+  const { showNotification } = useNotification();
 
-  const handleConfirm = async () => {
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsLoading(false);
-    setIsOpen(false);
-    alert(`${type} action confirmed!`);
-  };
+  // State management
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // UI state
+  const [inputMessage, setInputMessage] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState<ApiKeyProvider>('OpenAI');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showNewSessionModal, setShowNewSessionModal] = useState(false);
+  const [newSessionTitle, setNewSessionTitle] = useState('');
 
-  const getButtonText = () => {
-    switch (type) {
-      case 'danger': return 'Delete Item';
-      case 'info': return 'Save Changes';
-      case 'warning':
-      default: return 'Confirm Action';
+  // Load chat sessions on mount
+  useEffect(() => {
+    if (user) {
+      loadChatSessions();
     }
-  };
+  }, [user]);
 
-  const getModalProps = () => {
-    switch (type) {
-      case 'danger':
-        return {
-          title: 'Delete Confirmation',
-          message: 'Are you sure you want to delete this item? This action cannot be undone.',
-          confirmText: 'Delete'
-        };
-      case 'info':
-        return {
-          title: 'Save Changes',
-          message: 'Do you want to save your changes before continuing?',
-          confirmText: 'Save'
-        };
-      case 'warning':
-      default:
-        return {
-          title: 'Confirm Action',
-          message: 'Are you sure you want to proceed with this action?',
-          confirmText: 'Confirm'
-        };
+  // Load messages when session changes
+  useEffect(() => {
+    if (currentSession) {
+      setMessages(currentSession.messages || []);
     }
-  };
+  }, [currentSession]);
 
-  const modalProps = getModalProps();
+  /**
+   * Load all chat sessions for the current user
+   */
+  const loadChatSessions = async () => {
+    if (!user) return;
 
-  return (
-    <>
-      <div className="bg-white p-4 rounded-lg">
-        <h3 className="font-semibold text-gray-900 mb-2 capitalize">{type} Modal</h3>
-        <button
-          onClick={() => setIsOpen(true)}
-          className={`
-            w-full px-4 py-2 rounded-md font-medium transition-colors
-            ${type === 'danger' 
-              ? 'bg-red-600 hover:bg-red-700 text-white' 
-              : type === 'info'
-                ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                : 'bg-green-600 hover:bg-green-700 text-white'
-            }
-          `}
-        >
-          {getButtonText()}
-        </button>
-      </div>
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      setChatSessions(data || []);
       
-      <ConfirmationModal
-        isOpen={isOpen}
-        type={type}
-        title={modalProps.title}
-        message={modalProps.message}
-        confirmText={modalProps.confirmText}
-        onConfirm={handleConfirm}
-        onCancel={() => setIsOpen(false)}
-        isLoading={isLoading}
-      />
-    </>
-  );
-};
+      // Select first session if available
+      if (data && data.length > 0 && !currentSession) {
+        setCurrentSession(data[0]);
+      }
 
-// Auth wrapper component to show loading, login/signup forms, or app
-const AuthWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading } = useAuth();
+    } catch (err: any) {
+      setError(err.message);
+      showNotification('Failed to load chat sessions', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Create a new chat session
+   */
+  const createNewSession = async () => {
+    if (!user || !newSessionTitle.trim()) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .insert({
+          user_id: user.id,
+          title: newSessionTitle.trim(),
+          messages: []
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setChatSessions(prev => [data, ...prev]);
+      setCurrentSession(data);
+      setNewSessionTitle('');
+      setShowNewSessionModal(false);
+      showNotification('New chat session created', 'success');
+
+    } catch (err: any) {
+      showNotification('Failed to create chat session', 'error');
+    }
+  };
+
+  /**
+   * Send a message to AI
+   */
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || !currentSession || sending) return;
+
+    const apiKey = apiKeys.find(key => key.provider === selectedProvider);
+    if (!apiKey) {
+      showNotification(`No API key found for ${selectedProvider}`, 'error');
+      return;
+    }
+
+    setSending(true);
+
+    // Add user message
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: inputMessage,
+      role: 'user',
+      timestamp: new Date().toISOString(),
+      provider: selectedProvider
+    };
+
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setInputMessage('');
+
+    try {
+      // Simulate AI response (replace with actual API call)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: `This is a simulated response from ${selectedProvider}. In production, this would be the actual AI response.`,
+        role: 'assistant',
+        timestamp: new Date().toISOString(),
+        provider: selectedProvider
+      };
+
+      const finalMessages = [...updatedMessages, aiMessage];
+      setMessages(finalMessages);
+
+      // Save to database
+      await supabase
+        .from('chat_sessions')
+        .update({
+          messages: finalMessages,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentSession.id);
+
+    } catch (err: any) {
+      showNotification('Failed to send message', 'error');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  /**
+   * Delete a chat session
+   */
+  const deleteSession = async (sessionId: string) => {
+    if (!window.confirm('Are you sure you want to delete this chat session?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) throw error;
+
+      setChatSessions(prev => prev.filter(s => s.id !== sessionId));
+      
+      if (currentSession?.id === sessionId) {
+        const remaining = chatSessions.filter(s => s.id !== sessionId);
+        setCurrentSession(remaining[0] || null);
+      }
+
+      showNotification('Chat session deleted', 'success');
+
+    } catch (err: any) {
+      showNotification('Failed to delete chat session', 'error');
+    }
+  };
+
+  // Filter sessions based on search
+  const filteredSessions = chatSessions.filter(session =>
+    session.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="h-screen bg-gray-900 flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     );
   }
 
-  if (!user) {
-    return <AuthPages />;
-  }
+  const { user } = useAuth();
+  const { apiKeys } = useApiKeys();
+  const { showNotification } = useNotification();
 
-  return <>{children}</>;
-};
+  // State management
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // UI state
+  const [inputMessage, setInputMessage] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState<ApiKeyProvider>('OpenAI');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showNewSessionModal, setShowNewSessionModal] = useState(false);
+  const [newSessionTitle, setNewSessionTitle] = useState('');
 
-// Login/Signup toggle pages
-const AuthPages: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  // Load chat sessions on mount
+  useEffect(() => {
+    if (user) {
+      loadChatSessions();
+    }
+  }, [user]);
 
-  return isLogin ? (
-    <LoginForm onToggleForm={() => setIsLogin(false)} />
-  ) : (
-    <SignupForm onToggleForm={() => setIsLogin(true)} />
+  // Load messages when session changes
+  useEffect(() => {
+    if (currentSession) {
+      setMessages(currentSession.messages || []);
+    }
+  }, [currentSession]);
+
+  // Set default provider when API keys load
+  useEffect(() => {
+    if (apiKeys.length > 0 && !apiKeys.find(k => k.provider === selectedProvider)) {
+      setSelectedProvider(apiKeys[0].provider);
+    }
+  }, [apiKeys, selectedProvider]);
+
+  /**
+   * Load all chat sessions for the current user
+   */
+  const loadChatSessions = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      setChatSessions(data || []);
+      
+      // Select first session if available
+      if (data && data.length > 0 && !currentSession) {
+        setCurrentSession(data[0]);
+      }
+
+    } catch (err: any) {
+      setError(err.message);
+      showNotification('Failed to load chat sessions', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Create a new chat session
+   */
+  const createNewSession = async () => {
+    if (!user || !newSessionTitle.trim()) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .insert({
+          user_id: user.id,
+          title: newSessionTitle.trim(),
+          messages: []
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setChatSessions(prev => [data, ...prev]);
+      setCurrentSession(data);
+      setNewSessionTitle('');
+      setShowNewSessionModal(false);
+      showNotification('New chat session created', 'success');
+
+    } catch (err: any) {
+      showNotification('Failed to create chat session', 'error');
+    }
+  };
+
+  /**
+   * Send a message to AI
+   */
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || !currentSession || sending) return;
+
+    const apiKey = apiKeys.find(key => key.provider === selectedProvider);
+    if (!apiKey) {
+      showNotification(`No API key found for ${selectedProvider}`, 'error');
+      return;
+    }
+
+    setSending(true);
+
+    // Add user message
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: inputMessage,
+      role: 'user',
+      timestamp: new Date().toISOString(),
+      provider: selectedProvider
+    };
+
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setInputMessage('');
+
+    try {
+      // Simulate AI response (replace with actual API call)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: `This is a simulated response from ${selectedProvider}. In production, this would connect to the actual AI API using your stored API key. The response would be generated based on your message: "${userMessage.content}"`,
+        role: 'assistant',
+        timestamp: new Date().toISOString(),
+        provider: selectedProvider
+      };
+
+      const finalMessages = [...updatedMessages, aiMessage];
+      setMessages(finalMessages);
+
+      // Save to database
+      await supabase
+        .from('chat_sessions')
+        .update({
+          messages: finalMessages,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentSession.id);
+
+      // Update current session in state
+      setCurrentSession(prev => prev ? { ...prev, messages: finalMessages, updated_at: new Date().toISOString() } : null);
+
+    } catch (err: any) {
+      showNotification('Failed to send message', 'error');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  /**
+   * Delete a chat session
+   */
+  const deleteSession = async (sessionId: string) => {
+    if (!window.confirm('Are you sure you want to delete this chat session? This action cannot be undone.')) return;
+
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) throw error;
+
+      setChatSessions(prev => prev.filter(s => s.id !== sessionId));
+      
+      if (currentSession?.id === sessionId) {
+        const remaining = chatSessions.filter(s => s.id !== sessionId);
+        setCurrentSession(remaining[0] || null);
+      }
+
+      showNotification('Chat session deleted', 'success');
+
+    } catch (err: any) {
+      showNotification('Failed to delete chat session', 'error');
+    }
+  };
+
+  /**
+   * Handle keyboard shortcuts
+   */
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  // Filter sessions based on search
+  const filteredSessions = chatSessions.filter(session =>
+    session.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
-};
 
-// Main app layout with sidebar toggle and header
-const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  return (
-    <>
-      <AppHeader onMenuClick={() => setSidebarOpen(true)} />
-      <div className="flex min-h-screen bg-gray-50 pt-16">
-        <SidebarNavigation isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 flex flex-col overflow-hidden lg:ml-72">
-          <main className="flex-1 overflow-y-auto p-6">{children}</main>
+  if (loading) {
+    return (
+      <div className="h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="text-gray-400 mt-4">Loading chat sessions...</p>
         </div>
       </div>
-    </>
-  );
-};
+    );
+  }
 
-// Main App component with all providers and routes
-function App() {
   return (
-    <ErrorBoundary>
-      <NotificationProvider>
-        <AuthProvider>
-          <Router>
-            <AuthWrapper>
-              <ApiKeysProvider>
-                <ChatProvider>
-                  <ProjectProvider>
-                    <GitHubProvider>
-                      <AIProviderProvider>
-                        <MemoryProvider>
-                          <FeedbackProvider>
-                            <AppLayout>
-                              <Routes>
-                                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                                <Route path="/dashboard" element={<Dashboard />} />
-                                <Route path="/chat" element={<ChatPage />} />
-                                <Route path="/chat-interface" element={<ChatInterface />} />
-                                <Route path="/memory" element={<MemoryPage />} />
-                                <Route
-                                  path="/chat-window"
-                                  element={
-                                    <div className="h-screen">
-                                      <ChatWindow />
-                                    </div>
-                                  }
-                                />
-                                <Route path="/editor" element={<CodeEditorPage />} />
-                                <Route path="/signup" element={<SignupPage />} />
-                                <Route path="/api-keys" element={<ApiKeysPage />} />
-                                <Route path="/projects" element={<ProjectsList />} />
-                                <Route path="/api-keys" element={<ApiKeysPage />} />
-                                <Route path="/project-dashboard" element={<ProjectDashboard />} />
-                                <Route path="/file-explorer" element={<ProjectFileExplorer />} />
-                                <Route path="/project-settings" element={<ProjectSettingsPanel />} />
-                                <Route path="/chat-settings" element={<ChatSettingsPanel />} />
-                                <Route path="/profile-settings" element={<UserProfileSettings />} />
-                                <Route path="/analytics" element={<AIAnalyticsDashboard />} />
-                                <Route
-                                  path="/activity-feed-demo"
-                                  element={
-                                    <div className="max-w-4xl mx-auto p-8">
-                                      <h2 className="text-2xl font-bold text-gray-900 mb-6">Activity Feed Demo</h2>
-                                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                        <div>
-                                          <h3 className="text-lg font-semibold text-gray-900 mb-4">Default Activity Feed</h3>
-                                          <ActivityFeed
-                                            onActivityClick={(activity) => {
-                                              console.log('Activity clicked:', activity);
-                                              alert(`Clicked: ${activity.description}`);
-                                            }}
-                                            onClearAll={() => {
-                                              console.log('Clear all clicked');
-                                              alert('All activities cleared!');
-                                            }}
-                                          />
-                                        </div>
-                                        <div>
-                                          <h3 className="text-lg font-semibold text-gray-900 mb-4">Compact Feed (No Actions)</h3>
-                                          <ActivityFeed showActions={false} maxHeight="300px" className="max-w-sm" />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  }
-                                />
-                                <Route
-                                  path="/chat-input-demo"
-                                  element={
-                                    <div className="max-w-2xl mx-auto p-8">
-                                      <h2 className="text-2xl font-bold text-gray-900 mb-6">Chat Input Bar Demo</h2>
-                                      <div className="border border-gray-200 rounded-lg overflow-hidden">
-                                        <div className="h-64 bg-gray-50 flex items-center justify-center">
-                                          <p className="text-gray-500">Chat messages would appear here</p>
-                                        </div>
-                                        <ChatInputBar
-                                          onSendMessage={(message) => {
-                                            console.log('Message sent:', message);
-                                            alert(`Message sent: "${message}"`);
-                                          }}
-                                          placeholder="Try typing a message..."
-                                        />
-                                      </div>
-                                    </div>
-                                  }
-                                />
-                                <Route
-                                  path="/chat-bubble-demo"
-                                  element={
-                                    <div className="max-w-2xl mx-auto p-8 space-y-4">
-                                      <h2 className="text-2xl font-bold text-gray-900 mb-6">Chat Message Bubble Demo</h2>
-                                      <ChatMessageBubble
-                                        message="Hello! How can I help you today?"
-                                        isUser={false}
-                                        timestamp={new Date(Date.now() - 300000)}
-                                      />
-                                      <ChatMessageBubble
-                                        message="I need help with my React project. Can you explain how to use hooks?"
-                                        isUser={true}
-                                        timestamp={new Date(Date.now() - 240000)}
-                                      />
-                                      <ChatMessageBubble
-                                        message="I'd be happy to help! React hooks are functions that let you use state and other React features in functional components. The most common hooks are useState for managing state and useEffect for side effects."
-                                        isUser={false}
-                                        timestamp={new Date(Date.now() - 180000)}
-                                      />
-                                      <ChatMessageBubble
-                                        message="That's really helpful, thank you!"
-                                        isUser={true}
-                                        timestamp={new Date(Date.now() - 120000)}
-                                      />
-                                    </div>
-                                  }
-                                />
-                                <Route
-                                  path="/chat-sidebar-demo"
-                                  element={
-                                    <div className="h-screen flex">
-                                      <ChatSidebar
-                                        selectedChatId="1"
-                                        onChatSelect={(id) => console.log('Selected chat:', id)}
-                                        onNewChat={() => console.log('New chat clicked')}
-                                      />
-                                      <div className="flex-1 flex items-center justify-center bg-gray-50">
-                                        <div className="text-center">
-                                          <h2 className="text-2xl font-bold text-gray-900 mb-4">Chat Sidebar Demo</h2>
-                                          <p className="text-gray-600">Select a chat from the sidebar to view conversation</p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  }
-                                />
-                                <Route
-                                  path="/notifications-demo"
-                                  element={
-                                    <div className="max-w-4xl mx-auto p-8">
-                                      <h2 className="text-2xl font-bold text-gray-900 mb-6">User Notifications Panel Demo</h2>
-                                      <div className="relative">
-                                        <div className="bg-gray-100 p-8 rounded-lg">
-                                          <p className="text-gray-600 mb-4">
-                                            This demo shows the notifications panel that would typically appear as a dropdown from the header.
-                                          </p>
-                                          <UserNotificationsPanel isOpen={true} onClose={() => console.log('Close notifications')} />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  }
-                                />
-                                <Route
-                                  path="/billing"
-                                  element={
-                                    <div className="max-w-6xl mx-auto">
-                                      <SubscriptionBillingPage />
-                                    </div>
-                                  }
-                                />
-                                <Route
-                                  path="/payment-method"
-                                  element={
-                                    <div className="max-w-4xl mx-auto">
-                                      <PaymentMethodForm
-                                        onSubmit={async (data) => {
-                                          console.log('Payment method data:', data);
-                                          await new Promise(resolve => setTimeout(resolve, 2000));
-                                          alert('Payment method saved successfully!');
-                                        }}
-                                        onCancel={() => {
-                                          console.log('Payment form cancelled');
-                                          alert('Payment form cancelled');
-                                        }}
-                                      />
-                                    </div>
-                                  }
-                                />
-                                <Route
-                                  path="/support"
-                                  element={
-                                    <div className="max-w-6xl mx-auto">
-                                      <SupportFAQPage />
-                                    </div>
-                                  }
-                                />
-                                <Route
-                                  path="/admin"
-                                  element={
-                                    <div className="max-w-7xl mx-auto">
-                                      <AdminDashboard />
-                                    </div>
-                                  }
-                                />
-                                <Route
-                                  path="/admin/users"
-                                  element={
-                                    <div className="max-w-5xl mx-auto">
-                                      <UserRoleManagement />
-                                    </div>
-                                  }
-                                />
-                                <Route
-                                  path="/chat-notifications-demo"
-                                  element={
-                                    <div className="max-w-4xl mx-auto p-8">
-                                      <h2 className="text-2xl font-bold text-gray-900 mb-6">Chat Notifications Demo</h2>
-                                      <div className="bg-gray-100 p-8 rounded-lg min-h-96">
-                                        <p className="text-gray-600 mb-4">
-                                          This demo shows the chat notifications system that appears in the bottom-right corner.
-                                          Click the "Add Notification" button to see different notification types.
-                                        </p>
-                                        <div className="space-y-4">
-                                          <div className="bg-white p-4 rounded-lg">
-                                            <h3 className="font-semibold text-gray-900 mb-2">Features:</h3>
-                                            <ul className="text-sm text-gray-600 space-y-1">
-                                              <li>• Auto-dismiss after 5 seconds</li>
-                                              <li>• Click to interact with notifications</li>
-                                              <li>• Manual dismiss with close button</li>
-                                              <li>• Different types: message, system, success, error</li>
-                                              <li>• Smooth animations and hover effects</li>
-                                              <li>• Keyboard accessible</li>
-                                            </ul>
-                                          </div>
-                                        </div>
-                                        <ChatNotifications />
-                                      </div>
-                                    </div>
-                                  }
-                                />
-                                <Route
-                                  path="/confirmation-modal-demo"
-                                  element={
-                                    <div className="max-w-4xl mx-auto p-8">
-                                      <h2 className="text-2xl font-bold text-gray-900 mb-6">Confirmation Modal Demo</h2>
-                                      <div className="bg-gray-100 p-8 rounded-lg">
-                                        <p className="text-gray-600 mb-6">
-                                          Test the confirmation modal component with different types and configurations.
-                                        </p>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                          <ConfirmationModalDemo type="warning" />
-                                          <ConfirmationModalDemo type="danger" />
-                                          <ConfirmationModalDemo type="info" />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  }
-                                />
-                                <Route
-                                  path="/feedback-demo"
-                                  element={
-                                    <div className="max-w-4xl mx-auto p-8">
-                                      <h2 className="text-2xl font-bold text-gray-900 mb-6">Feedback System Demo</h2>
-                                      <div className="space-y-8">
-                                        <div className="bg-gray-100 p-6 rounded-lg">
-                                          <h3 className="text-lg font-semibold text-gray-900 mb-4">AI Response Feedback</h3>
-                                          <div className="bg-white p-4 rounded-lg mb-4">
-                                            <p className="text-gray-800 mb-2">
-                                              <strong>AI Assistant:</strong> Here's a React component that demonstrates useState hook usage:
-                                            </p>
-                                            <pre className="bg-gray-100 p-3 rounded text-sm overflow-x-auto">{`function Counter() {
-  const [count, setCount] = useState(0);
-  
-  return (
-    <div>
-      <p>Count: {count}</p>
-      <button onClick={() => setCount(count + 1)}>
-        Increment
-      </button>
+    <div className="h-screen bg-gray-900 flex">
+      {/* Sidebar - Chat Sessions */}
+      <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white">Chat Sessions</h2>
+            <button
+              onClick={() => setShowNewSessionModal(true)}
+              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              title="New chat session"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+          
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search sessions..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+        </div>
+
+        {/* Sessions List */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredSessions.length > 0 ? (
+            <div className="p-2">
+              {filteredSessions.map((session) => (
+                <div
+                  key={session.id}
+                  className={`p-3 rounded-lg mb-2 cursor-pointer transition-colors group ${
+                    currentSession?.id === session.id
+                      ? 'bg-green-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-700'
+                  }`}
+                  onClick={() => setCurrentSession(session)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">{session.title}</h3>
+                      <p className="text-xs opacity-75 mt-1">
+                        {session.messages?.length || 0} messages
+                      </p>
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSession(session.id);
+                        }}
+                        className="p-1 hover:bg-red-600 rounded"
+                        title="Delete session"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 text-center text-gray-400">
+              <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+              <p>No chat sessions found</p>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="text-green-400 hover:text-green-300 text-sm mt-2"
+                >
+                  Clear search
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {currentSession ? (
+          <>
+            {/* Chat Header */}
+            <div className="bg-gray-800 border-b border-gray-700 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-semibold text-white">{currentSession.title}</h1>
+                  <p className="text-gray-400 text-sm">
+                    {messages.length} messages • Last updated {new Date(currentSession.updated_at).toLocaleDateString()}
+                  </p>
+                </div>
+                
+                {/* Provider Selector */}
+                <div className="flex items-center gap-3">
+                  <label className="text-gray-400 text-sm">Provider:</label>
+                  <select
+                    value={selectedProvider}
+                    onChange={(e) => setSelectedProvider(e.target.value as ApiKeyProvider)}
+                    className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    {apiKeys.map(key => (
+                      <option key={key.id} value={key.provider}>{key.provider}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+                >
+                  {/* Avatar */}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    message.role === 'user' ? 'bg-blue-600' : 'bg-gray-600'
+                  }`}>
+                    {message.role === 'user' ? (
+                      <User className="w-4 h-4 text-white" />
+                    ) : (
+                      <Bot className="w-4 h-4 text-white" />
+                    )}
+                  </div>
+
+                  {/* Message Bubble */}
+                  <div className={`max-w-3xl ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
+                    <div className={`inline-block px-4 py-2 rounded-lg ${
+                      message.role === 'user'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-100'
+                    }`}>
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(message.timestamp).toLocaleTimeString()}
+                      {message.provider && ` • ${message.provider}`}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              
+              {sending && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="bg-gray-700 text-gray-100 px-4 py-2 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner size="sm" />
+                      <span>AI is thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Message Input */}
+            <div className="bg-gray-800 border-t border-gray-700 p-4">
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  placeholder="Type your message..."
+                  disabled={sending || apiKeys.length === 0}
+                  className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!inputMessage.trim() || sending || apiKeys.length === 0}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+              
+              {apiKeys.length === 0 && (
+                <p className="text-red-400 text-sm mt-2">
+                  Add an API key to start chatting with AI
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          /* No Session Selected */
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <MessageSquare className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-white mb-2">No Chat Session Selected</h2>
+              <p className="text-gray-400 mb-6">Select a session from the sidebar or create a new one</p>
+              <button
+                onClick={() => setShowNewSessionModal(true)}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Start New Chat
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* New Session Modal */}
+      {showNewSessionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">New Chat Session</h3>
+            <input
+              type="text"
+              value={newSessionTitle}
+              onChange={(e) => setNewSessionTitle(e.target.value)}
+              placeholder="Enter session title..."
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 mb-4"
+              autoFocus
+            />
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Chat Sessions
+            </h2>
+            <button
+              onClick={() => setShowNewSessionModal(true)}
+              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              title="New chat session"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+          
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search sessions..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+        </div>
+
+        {/* Sessions List */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredSessions.length > 0 ? (
+            <div className="p-2">
+              {filteredSessions.map((session) => (
+                <div
+                  key={session.id}
+                  className={`p-3 rounded-lg mb-2 cursor-pointer transition-all duration-200 group ${
+                    currentSession?.id === session.id
+                      ? 'bg-green-600 text-white shadow-lg'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}
+                  onClick={() => setCurrentSession(session)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">{session.title}</h3>
+                      <p className="text-xs opacity-75 mt-1">
+                        {session.messages?.length || 0} messages
+                      </p>
+                      <p className="text-xs opacity-60 mt-1">
+                        {new Date(session.updated_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSession(session.id);
+                        }}
+                        className="p-1 hover:bg-red-600 rounded transition-colors"
+                        title="Delete session"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 text-center text-gray-400">
+              <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+              <p className="font-medium">No chat sessions found</p>
+              {searchQuery ? (
+                <div className="mt-3">
+                  <p className="text-sm mb-2">No sessions match "{searchQuery}"</p>
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="text-green-400 hover:text-green-300 text-sm"
+                  >
+                    Clear search
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm mt-2">Create your first chat session to get started</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {currentSession ? (
+          <>
+            {/* Chat Header */}
+            <div className="bg-gray-800 border-b border-gray-700 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-semibold text-white">{currentSession.title}</h1>
+                  <p className="text-gray-400 text-sm">
+                    {messages.length} messages • Last updated {new Date(currentSession.updated_at).toLocaleDateString()}
+                  </p>
+                </div>
+                
+                {/* Provider Selector */}
+                {apiKeys.length > 0 && (
+                  <div className="flex items-center gap-3">
+                    <label className="text-gray-400 text-sm">Provider:</label>
+                    <select
+                      value={selectedProvider}
+                      onChange={(e) => setSelectedProvider(e.target.value as ApiKeyProvider)}
+                      className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      {apiKeys.map(key => (
+                        <option key={key.id} value={key.provider}>{key.provider}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.length > 0 ? (
+                messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+                  >
+                    {/* Avatar */}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      message.role === 'user' ? 'bg-blue-600' : 'bg-gray-600'
+                    }`}>
+                      {message.role === 'user' ? (
+                        <User className="w-4 h-4 text-white" />
+                      ) : (
+                        <Bot className="w-4 h-4 text-white" />
+                      )}
+                    </div>
+
+                    {/* Message Bubble */}
+                    <div className={`max-w-3xl ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
+                      <div className={`inline-block px-4 py-3 rounded-lg ${
+                        message.role === 'user'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-700 text-gray-100'
+                      }`}>
+                        <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1 px-1">
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                        {message.provider && ` • ${message.provider}`}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <Bot className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-white mb-2">Start a Conversation</h3>
+                    <p className="text-gray-400">Send a message to begin chatting with AI</p>
+                  </div>
+                </div>
+              )}
+              
+              {sending && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="bg-gray-700 text-gray-100 px-4 py-3 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner size="sm" />
+                      <span>AI is thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Message Input */}
+            <div className="bg-gray-800 border-t border-gray-700 p-4">
+              <div className="flex gap-3">
+                <textarea
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder={apiKeys.length > 0 ? "Type your message... (Enter to send, Shift+Enter for new line)" : "Add an API key to start chatting"}
+                  disabled={sending || apiKeys.length === 0}
+                  className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 resize-none"
+                  rows={1}
+                  style={{ minHeight: '48px', maxHeight: '120px' }}
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!inputMessage.trim() || sending || apiKeys.length === 0}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {sending ? (
+                    <LoadingSpinner size="sm" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+              
+              {apiKeys.length === 0 && (
+                <p className="text-red-400 text-sm mt-2 flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>Add an API key in settings to start chatting with AI</span>
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          /* No Session Selected */
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <MessageSquare className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-white mb-2">No Chat Session Selected</h2>
+              <p className="text-gray-400 mb-6">Select a session from the sidebar or create a new one</p>
+              <button
+                onClick={() => setShowNewSessionModal(true)}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 mx-auto"
+              >
+                <Plus className="w-4 h-4" />
+                Start New Chat
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* New Session Modal */}
+      {showNewSessionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">New Chat Session</h3>
+              <button
+                onClick={() => {
+                  setShowNewSessionModal(false);
+                  setNewSessionTitle('');
+                }}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="sessionTitle" className="block text-sm font-medium text-gray-300 mb-2">
+                  Session Title
+                </label>
+                <input
+                  id="sessionTitle"
+                  type="text"
+                  value={newSessionTitle}
+                  onChange={(e) => setNewSessionTitle(e.target.value)}
+                  placeholder="Enter session title..."
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  autoFocus
+                  maxLength={100}
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowNewSessionModal(false);
+                    setNewSessionTitle('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createNewSession}
+                  disabled={!newSessionTitle.trim()}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Create Session
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}`}</pre>
-                                          </div>
-                                          <FeedbackForm
-                                            aiResponseId="demo-response-1"
-                                            aiProvider="OpenAI"
-                                            chatSessionId="demo-session-1"
-                                            responseContext={{
-                                              topic: 'React useState hook',
-                                              code_example: true,
-                                              response_length: 'medium',
-                                            }}
-                                            onFeedbackSubmitted={(feedback) => {
-                                              console.log('Demo feedback submitted:', feedback);
-                                              alert('Feedback submitted successfully!');
-                                            }}
-                                          />
-                                        </div>
-                                        <div className="bg-gray-100 p-6 rounded-lg">
-                                          <h3 className="text-lg font-semibold text-gray-900 mb-4">Compact Feedback Form</h3>
-                                          <div className="bg-white p-4 rounded-lg mb-4">
-                                            <p className="text-gray-800">
-                                              <strong>AI Assistant:</strong> To center a div, you can use flexbox with justify-content: center and align-items: center.
-                                            </p>
-                                          </div>
-                                          <FeedbackForm
-                                            aiResponseId="demo-response-2"
-                                            aiProvider="Claude"
-                                            chatSessionId="demo-session-2"
-                                            compact={true}
-                                            responseContext={{
-                                              topic: 'CSS centering',
-                                              code_example: false,
-                                              response_length: 'short',
-                                            }}
-                                            onFeedbackSubmitted={(feedback) => {
-                                              console.log('Compact feedback submitted:', feedback);
-                                              alert('Compact feedback submitted!');
-                                            }}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  }
-                                />
-                                <Route path="*" element={<PlaceholderPage />} />
-                              </Routes>
-                            </AppLayout>
-                          </FeedbackProvider>
-                        </MemoryProvider>
-                      </AIProviderProvider>
-                    </GitHubProvider>
-                  </ProjectProvider>
-                </ChatProvider>
-              </ApiKeysProvider>
-            </AuthWrapper>
-          </Router>
-        </AuthProvider>
-      </NotificationProvider>
-    </ErrorBoundary>
-  );
-}
-
-export default App;
+};
