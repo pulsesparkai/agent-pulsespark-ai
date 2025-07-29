@@ -16,7 +16,6 @@ from datetime import datetime
 from enum import Enum
 import json
 import uuid
-from memory_api import memory_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
