@@ -17,7 +17,8 @@ export const API_CONFIG = {
 export const APP_CONFIG = {
   NAME: import.meta.env.VITE_APP_NAME || 'PulseSpark AI',
   VERSION: import.meta.env.VITE_APP_VERSION || '1.0.0',
-  ENVIRONMENT: import.meta.env.NODE_ENV || 'development'
+  ENVIRONMENT: import.meta.env.NODE_ENV || 'development',
+  FRONTEND_URL: import.meta.env.VITE_FRONTEND_URL || 'https://agent.pulsespark.ai'
 } as const;
 
 // Supabase Configuration
