@@ -168,7 +168,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         }));
 
       // Call backend API
-      const response = await fetch('http://localhost:8000/generate', {
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://agent-pulsespark-ai.onrender.com'
+  : 'https://agent-pulsespark-ai.onrender.com/generate';
+
+const response = await fetch(`${API_URL}/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
