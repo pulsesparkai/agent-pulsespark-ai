@@ -52,8 +52,8 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
     },
     {
       id: 'projects',
-      label: 'Projects',
-      path: '/projects',
+     label: 'Projects',
+     path: '/projects-list',
       icon: FolderOpen
     },
     {

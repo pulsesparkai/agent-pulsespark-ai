@@ -215,6 +215,7 @@ function App() {
                                 <Route path="/chat-settings" element={<ChatSettingsPanel />} />
                                 <Route path="/profile-settings" element={<UserProfileSettings />} />
                                 <Route path="/analytics" element={<AIAnalyticsDashboard />} />
+                                <Route path="/projects-list" element={<ProjectsList />} />
                                 <Route
                                   path="/activity-feed-demo"
                                   element={
