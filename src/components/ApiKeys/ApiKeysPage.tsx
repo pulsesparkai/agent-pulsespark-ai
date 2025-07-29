@@ -224,6 +224,7 @@ export const ApiKeysPage: React.FC<ApiKeysPageProps> = ({ className = '' }) => {
       const keyPreview = `****${createFormData.api_key.slice(-4)}`;
 
       const newApiKey = {
+        user_id: user.id,  // FIXED: Added the missing user_id field
         provider: createFormData.provider,
         encrypted_key: encryptedKey,
         key_preview: keyPreview
