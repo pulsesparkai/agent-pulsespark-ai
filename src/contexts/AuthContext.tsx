@@ -25,6 +25,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
+        // Note: We use Supabase's built-in auth.users table, not a custom users table
         setUser({
           id: session.user.id,
           email: session.user.email!,
@@ -40,6 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
+          // Note: We use Supabase's built-in auth.users table, not a custom users table
           setUser({
             id: session.user.id,
             email: session.user.email!,

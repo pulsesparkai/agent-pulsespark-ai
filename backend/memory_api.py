@@ -140,11 +140,11 @@ class MemoryStatsResponse(BaseModel):
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
     """
-    Validate user authentication token and return user information
+    Validate user authentication token and return user information from auth.users
     Integrates with Supabase Auth for token validation
     """
     try:
-        # Validate JWT token with Supabase
+        # Validate JWT token with Supabase - this checks against auth.users table
         response = supabase.auth.get_user(credentials.credentials)
         
         if not response.user:

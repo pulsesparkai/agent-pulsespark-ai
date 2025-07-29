@@ -33,6 +33,7 @@ export const ApiKeysProvider: React.FC<ApiKeysProviderProps> = ({ children }) =>
     setError(null);
 
     try {
+      // Query api_keys table which references auth.users(id) via user_id foreign key
       const { data, error } = await supabase
         .from('api_keys')
         .select('*')

@@ -48,6 +48,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
 
     setLoading(true);
     try {
+      // Query projects table which references auth.users(id) via user_id foreign key
       const { data, error } = await supabase
         .from('projects')
         .select('*')
