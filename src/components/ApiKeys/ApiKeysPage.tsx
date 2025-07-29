@@ -270,7 +270,10 @@ export const ApiKeysPage: React.FC<ApiKeysPageProps> = ({ className = '' }) => {
     try {
       const { error: updateError } = await supabase
         .from('api_keys')
-        .update({ provider: editFormData.provider })
+        .update({ 
+          provider: editFormData.provider,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', editingKeyId);
 
       if (updateError) {
