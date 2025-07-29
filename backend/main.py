@@ -551,4 +551,6 @@ async def http_exception_handler(request, exc):
     """Custom HTTP exception handler"""
     return {
         "error": exc.detail,
-        "error_code": f"HTTP_{exc.status_code
+        "error_code": f"HTTP_{exc.status_code}",
+        "timestamp": datetime.utcnow().isoformat()
+    }
