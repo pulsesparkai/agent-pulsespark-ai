@@ -51,7 +51,7 @@ class APIProvider(str, Enum):
 
 class ChatMessage(BaseModel):
     """Individual chat message structure"""
-    role: str = Field(..., pattern="^(user|assistant|system)$")  # FIXED HERE: regex -> pattern
+    role: str = Field(..., pattern="^(user|assistant|system)$")  # pattern instead of regex
     content: str = Field(..., min_length=1, max_length=50000)
     timestamp: Optional[str] = None
 
@@ -551,6 +551,4 @@ async def http_exception_handler(request, exc):
     """Custom HTTP exception handler"""
     return {
         "error": exc.detail,
-        "error_code": f"HTTP_{exc.status_code}",
-        "timestamp": datetime.utcnow().isoformat()
-   
+        "error_code": f"HTTP_{exc.status_code
