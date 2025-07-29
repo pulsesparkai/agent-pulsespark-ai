@@ -18,24 +18,19 @@ import {
 } from 'lucide-react';
 import { ChatMessage, ChatSession, ApiKeyProvider } from '../../types';
 
-/**
- * ChatPage Component
- * 
- * Complete chat management interface with session management,
- * message history, and AI provider integration.
- */
 export const ChatPage: React.FC = () => {
   const { user } = useAuth();
   const { apiKeys } = useApiKeys();
   const { showNotification } = useNotification();
 
-  // State management
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // ...rest of your component code
   
   // UI state
   const [inputMessage, setInputMessage] = useState('');
