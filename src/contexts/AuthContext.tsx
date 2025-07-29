@@ -64,12 +64,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email,
         password,
         options: {
-          emailRedirectTo: window.location.origin
+          emailRedirectTo: `${window.location.origin}/auth/callback`
         }
       });
       if (error) throw error;
     } catch (error: any) {
-      throw new Error(error.message);
+      console.error('Sign up error:', error);
+      throw new Error(error.message || 'Failed to create account');
     } finally {
       setLoading(false);
     }
@@ -84,7 +85,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       if (error) throw error;
     } catch (error: any) {
-      throw new Error(error.message);
+      console.error('Sign in error:', error);
+      throw new Error(error.message || 'Failed to sign in');
     } finally {
       setLoading(false);
     }
@@ -96,7 +98,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (error: any) {
-      throw new Error(error.message);
+      console.error('Sign out error:', error);
+      throw new Error(error.message || 'Failed to sign out');
     } finally {
       setLoading(false);
     }

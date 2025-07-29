@@ -1,12 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ErrorBoundary } from './components/Shared/ErrorBoundary';
 import { AuthProvider } from './contexts/AuthContext';
 import { ApiKeysProvider } from './contexts/ApiKeysContext';
 import { ProjectProvider } from './contexts/ProjectContext';
 import { MemoryProvider } from './contexts/MemoryContext';
 import { FeedbackProvider } from './contexts/FeedbackContext';
 import { NotificationProvider } from './contexts/NotificationContext';
-import { ErrorBoundary } from './components/Shared/ErrorBoundary';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -29,7 +29,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <LoadingSpinner size="lg" />
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="text-gray-400 mt-4">Loading PulseSpark...</p>
+        </div>
       </div>
     );
   }
@@ -51,7 +54,10 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <LoadingSpinner size="lg" />
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="text-gray-400 mt-4">Loading PulseSpark...</p>
+        </div>
       </div>
     );
   }
@@ -68,6 +74,27 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
  * Sets up routing, context providers, and error boundaries
  */
 function App() {
+  // Handle uncaught errors in production
+  React.useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('Uncaught error:', event.error);
+      // In production, send to error monitoring service
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      // In production, send to error monitoring service
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   return (
     <ErrorBoundary>
       <NotificationProvider>
@@ -104,6 +131,7 @@ function App() {
                                   <Route path="/feedback" element={<FeedbackPage />} />
                                   <Route path="/settings" element={<SettingsPage />} />
                                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
                                 </Routes>
                               </Layout>
                             </ProtectedRoute>
