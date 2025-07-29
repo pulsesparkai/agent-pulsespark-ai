@@ -47,6 +47,7 @@ A modern React application with Supabase backend for managing AI projects, chat 
    VITE_SUPABASE_URL=your_supabase_project_url
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
    VITE_API_URL=https://api.pulsespark.ai
+   VITE_FRONTEND_URL=https://agent.pulsespark.ai
    VITE_APP_NAME=PulseSpark AI
    VITE_APP_VERSION=1.0.0
    ```
@@ -74,6 +75,10 @@ npm run type-check     # TypeScript type checking
 
 ## 🚀 Deployment to Vercel
 
+### Deployment to agent.pulsespark.ai
+
+The frontend is deployed to **agent.pulsespark.ai** and connects to the backend API at **api.pulsespark.ai**.
+
 ### Option 1: Vercel CLI (Recommended)
 
 1. **Install Vercel CLI**
@@ -90,6 +95,11 @@ npm run type-check     # TypeScript type checking
    ```bash
    vercel --prod
    ```
+
+4. **Configure Custom Domain**
+   - In Vercel dashboard, go to Settings > Domains
+   - Add `agent.pulsespark.ai` as custom domain
+   - Ensure DNS is pointing to Vercel
 
 ### Option 2: GitHub Integration
 
@@ -115,6 +125,7 @@ In your Vercel project settings, add these environment variables:
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_API_URL=https://api.pulsespark.ai
+VITE_FRONTEND_URL=https://agent.pulsespark.ai
 VITE_APP_NAME=PulseSpark AI
 VITE_APP_VERSION=1.0.0
 NODE_ENV=production
