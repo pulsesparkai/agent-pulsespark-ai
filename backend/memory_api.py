@@ -499,6 +499,10 @@ async def update_memory_item(
         # Update in Supabase
         response = supabase.table("memory_items").update(update_fields).eq("id", memory_id).select().single().execute()
         
+        # Ensure updated_at is always set
+        if 'updated_at' not in update_fields:
+            update_fields['updated_at'] = datetime.utcnow().isoformat()
+        
         if not response.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
