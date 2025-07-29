@@ -215,7 +215,6 @@ function App() {
                                 <Route path="/chat-settings" element={<ChatSettingsPanel />} />
                                 <Route path="/profile-settings" element={<UserProfileSettings />} />
                                 <Route path="/analytics" element={<AIAnalyticsDashboard />} />
-                                <Route path="/projects-list" element={<ProjectsList />} />
                                 <Route
                                   path="/activity-feed-demo"
                                   element={
@@ -465,4 +464,45 @@ function App() {
                                           <h3 className="text-lg font-semibold text-gray-900 mb-4">Compact Feedback Form</h3>
                                           <div className="bg-white p-4 rounded-lg mb-4">
                                             <p className="text-gray-800">
-                                              <strong>AI Assistant:</strong> To center a div, you can use flexbox with justify-content
+                                              <strong>AI Assistant:</strong> To center a div, you can use flexbox with justify-content: center and align-items: center.
+                                            </p>
+                                          </div>
+                                          <FeedbackForm
+                                            aiResponseId="demo-response-2"
+                                            aiProvider="Claude"
+                                            chatSessionId="demo-session-2"
+                                            compact={true}
+                                            responseContext={{
+                                              topic: 'CSS centering',
+                                              code_example: false,
+                                              response_length: 'short',
+                                            }}
+                                            onFeedbackSubmitted={(feedback) => {
+                                              console.log('Compact feedback submitted:', feedback);
+                                              alert('Compact feedback submitted!');
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  }
+                                />
+                                <Route path="*" element={<PlaceholderPage />} />
+                              </Routes>
+                            </AppLayout>
+                          </FeedbackProvider>
+                        </MemoryProvider>
+                      </AIProviderProvider>
+                    </GitHubProvider>
+                  </ProjectProvider>
+                </ChatProvider>
+              </ApiKeysProvider>
+            </AuthWrapper>
+          </Router>
+        </AuthProvider>
+      </NotificationProvider>
+    </ErrorBoundary>
+  );
+}
+
+export default App;
