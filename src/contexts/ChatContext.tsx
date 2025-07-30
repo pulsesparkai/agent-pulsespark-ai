@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useNotification } from './NotificationContext';
@@ -55,6 +55,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [selectedProvider, setSelectedProvider] = useState('OpenAI');
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  
+  // Use ref to track pending messages when session is being created
+  const pendingMessageRef = useRef<string | null>(null);
 
   // Debug user changes
   useEffect(() => {
@@ -65,12 +68,25 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (user) {
       loadChatSessions();
+    } else {
+      // Clear state when user logs out
+      setChatSessions([]);
+      setCurrentSession(null);
+      setMessages([]);
     }
   }, [user]);
 
   useEffect(() => {
     if (currentSession) {
       loadMessagesForSession(currentSession.id);
+      
+      // Check if there's a pending message to send
+      if (pendingMessageRef.current) {
+        const message = pendingMessageRef.current;
+        pendingMessageRef.current = null;
+        // Send the pending message
+        sendMessage(message);
+      }
     } else {
       setMessages([]);
     }
@@ -85,21 +101,29 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error: sbError } = await supabase
         .from('chat_sessions')
         .select('*')
-        .eq('user_id', user.id)  // Filter by user
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
+      
       if (sbError) throw sbError;
+      
       setChatSessions(data || []);
+      
+      // Only set current session if we don't have one already
       if (data?.length > 0 && !currentSession) {
         setCurrentSession(data[0]);
       }
     } catch (err: any) {
+      console.error('Failed to load sessions:', err);
       setError(err.message || 'Failed to load sessions');
+      showNotification('Failed to load chat sessions', 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const loadMessagesForSession = async (sessionId: string) => {
+    if (!user) return;
+    
     setLoading(true);
     setError(null);
     try {
@@ -108,19 +132,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select('*')
         .eq('session_id', sessionId)
         .order('timestamp', { ascending: true });
+        
       if (sbError) throw sbError;
+      
       setMessages(data || []);
     } catch (err: any) {
+      console.error('Failed to load messages:', err);
       setError(err.message || 'Failed to load messages');
     } finally {
       setLoading(false);
     }
   };
 
-  const createNewSession = async (title: string) => {
+  const createNewSession = async (title: string): Promise<ChatSession | null> => {
     if (!user) {
       console.error('Cannot create session - no user');
-      return;
+      showNotification('Please log in to create a chat session', 'error');
+      return null;
     }
     
     setLoading(true);
@@ -132,36 +160,59 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           title,
           user_id: user.id
         })
-        .select();
-      if (sbError) throw sbError;
-      if (data?.[0]) {
-        setChatSessions(prev => [data[0], ...prev]);
-        setCurrentSession(data[0]);
-        setMessages([]);
+        .select()
+        .single();
+        
+      if (sbError) {
+        console.error('Session creation error:', sbError);
+        throw sbError;
       }
+      
+      if (data) {
+        setChatSessions(prev => [data, ...prev]);
+        setCurrentSession(data);
+        setMessages([]);
+        showNotification('New chat session created', 'success');
+        return data;
+      }
+      
+      return null;
     } catch (err: any) {
+      console.error('Failed to create session:', err);
       setError(err.message || 'Failed to create session');
+      showNotification('Failed to create chat session', 'error');
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
   const deleteSession = async (id: string) => {
+    if (!user) return;
+    
     setLoading(true);
     setError(null);
     try {
       const { error: sbError } = await supabase
         .from('chat_sessions')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id); // Extra safety check
+        
       if (sbError) throw sbError;
+      
       setChatSessions(prev => prev.filter(s => s.id !== id));
+      
       if (currentSession?.id === id) {
         setCurrentSession(null);
         setMessages([]);
       }
+      
+      showNotification('Chat session deleted', 'success');
     } catch (err: any) {
+      console.error('Failed to delete session:', err);
       setError(err.message || 'Failed to delete session');
+      showNotification('Failed to delete chat session', 'error');
     } finally {
       setLoading(false);
     }
@@ -186,25 +237,25 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Ensure user is loaded
     if (!user || !user.id) {
       console.error('User not loaded or missing ID');
-      showNotification('User not authenticated. Please refresh the page.', 'error');
+      showNotification('Please log in to send messages', 'error');
       return;
     }
     
     // Auto-create session if none exists
     if (!currentSession) {
       console.log('No current session, creating one...');
+      pendingMessageRef.current = content; // Store the message to send after session creation
       await createNewSession('Chat - ' + new Date().toLocaleDateString());
-      // Wait for state to update
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Check if session was created
-      if (!currentSession) {
-        showNotification('Failed to create chat session. Please try again.', 'error');
-        return;
-      }
+      return; // The message will be sent automatically after session is created
     }
     
     if (!content.trim()) return;
+    
+    // Check if we're already sending a message
+    if (loading) {
+      console.log('Already processing a message');
+      return;
+    }
     
     setLoading(true);
     setError(null);
@@ -216,6 +267,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       timestamp: new Date().toISOString(),
       provider: selectedProvider,
     };
+    
     setMessages(prev => [...prev, userMessage]);
 
     try {
@@ -235,6 +287,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
 
       // Call AI service
+      console.log('Calling AI service...');
       const aiResponse = await aiService.sendMessage(
         content,
         selectedProvider,
@@ -242,6 +295,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentSession.id,
         conversationHistory
       );
+      
+      console.log('AI Response received:', aiResponse);
 
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -250,10 +305,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         timestamp: new Date().toISOString(),
         provider: selectedProvider,
       };
+      
       setMessages(prev => [...prev, aiMessage]);
 
-      // Save messages to database
-      await supabase.from('chat_messages').insert([
+      // Save both messages to database
+      const messagesToInsert = [
         { 
           session_id: currentSession.id,
           content: userMessage.content,
@@ -268,10 +324,22 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           timestamp: aiMessage.timestamp,
           provider: aiMessage.provider
         }
-      ]);
+      ];
+      
+      console.log('Saving messages to database:', messagesToInsert);
+      
+      const { error: insertError } = await supabase
+        .from('chat_messages')
+        .insert(messagesToInsert);
+        
+      if (insertError) {
+        console.error('Error saving messages:', insertError);
+        throw insertError;
+      }
       
       showNotification('Message sent successfully', 'success');
     } catch (err: any) {
+      console.error('Error in sendMessage:', err);
       const errorMessage = err.message || 'Failed to send message';
       setError(errorMessage);
       
@@ -289,6 +357,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Show helpful notification
       if (errorMessage.includes('No API key')) {
         showNotification(`Please add your ${selectedProvider} API key in Settings → API Keys`, 'error');
+      } else if (errorMessage.includes('Invalid API key')) {
+        showNotification(`Your ${selectedProvider} API key appears to be invalid. Please check it in Settings → API Keys`, 'error');
       } else {
         showNotification(errorMessage, 'error');
       }
