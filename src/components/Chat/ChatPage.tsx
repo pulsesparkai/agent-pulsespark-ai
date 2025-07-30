@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useApiKeys } from '../../contexts/ApiKeysContext';
 import { useNotification } from '../../contexts/NotificationContext';
-import { useChat } from '../../contexts/ChatContext';
 import { supabase } from '../../lib/supabase';
 import { LoadingSpinner } from '../Shared/LoadingSpinner';
 import { 
