@@ -19,6 +19,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { Layout } from './components/Layout/Layout';
 import { useAuth } from './contexts/AuthContext';
 import { LoadingSpinner } from './components/Shared/LoadingSpinner';
+import { DebugPanel } from './components/Shared/DebugPanel';
 
 const ProtectedLayout: React.FC = () => {
   const { user, loading } = useAuth();
@@ -86,6 +87,8 @@ function App() {
                           </Route>
                           <Route path="*" element={<Navigate to="/auth" replace />} />
                         </Routes>
+                        {/* Debug panel for development */}
+                        {import.meta.env.DEV && <DebugPanel />}
                       </div>
                     </Router>
                   </ChatProvider>

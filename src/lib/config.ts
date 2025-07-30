@@ -2,6 +2,18 @@
  * Application configuration constants
  */
 
+// Supabase Configuration with validation
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error('❌ Missing Supabase environment variables');
+  console.error('Required variables:', {
+    VITE_SUPABASE_URL: !!SUPABASE_URL,
+    VITE_SUPABASE_ANON_KEY: !!SUPABASE_ANON_KEY
+  });
+}
+
 // API Configuration
 export const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_URL || 'https://api.pulsespark.ai',
@@ -23,14 +35,10 @@ export const APP_CONFIG = {
 
 // Supabase Configuration
 export const SUPABASE_CONFIG = {
-  URL: import.meta.env.VITE_SUPABASE_URL,
-  ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY
+  URL: SUPABASE_URL,
+  ANON_KEY: SUPABASE_ANON_KEY,
+  IS_CONFIGURED: !!(SUPABASE_URL && SUPABASE_ANON_KEY)
 } as const;
-
-// Validation
-if (!SUPABASE_CONFIG.URL || !SUPABASE_CONFIG.ANON_KEY) {
-  throw new Error('Missing required Supabase environment variables');
-}
 
 export default {
   API_CONFIG,

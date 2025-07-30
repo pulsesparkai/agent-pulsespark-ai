@@ -1,7 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
-import { SUPABASE_CONFIG } from './config';
 
-export const supabase = createClient(SUPABASE_CONFIG.URL, SUPABASE_CONFIG.ANON_KEY, {
+// Supabase configuration with better error handling
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase environment variables:', {
+    url: !!supabaseUrl,
+    key: !!supabaseAnonKey
+  });
+  throw new Error('Missing required Supabase environment variables. Please check your .env file or Vercel environment settings.');
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -17,4 +28,3 @@ export const supabase = createClient(SUPABASE_CONFIG.URL, SUPABASE_CONFIG.ANON_K
 
 // Export environment check for debugging
 export const isProduction = import.meta.env.PROD;
-export const isDevelopment = import.meta.env.DEV;
