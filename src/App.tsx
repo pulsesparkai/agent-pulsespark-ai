@@ -6,6 +6,7 @@ import { ApiKeysProvider } from './contexts/ApiKeysContext';
 import { ProjectProvider } from './contexts/ProjectContext';
 import { MemoryProvider } from './contexts/MemoryContext';
 import { FeedbackProvider } from './contexts/FeedbackContext';
+import { ChatProvider } from './contexts/ChatContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -124,43 +125,45 @@ function App() {
             <ProjectProvider>
               <MemoryProvider>
                 <FeedbackProvider>
-                  <Router>
-                    <div className="min-h-screen bg-gray-900">
-                      <Routes>
-                        {/* Public Routes */}
-                        <Route
-                          path="/auth"
-                          element={
-                            <PublicRoute>
-                              <AuthPage />
-                            </PublicRoute>
-                          }
-                        />
+                  <ChatProvider>
+                    <Router>
+                      <div className="min-h-screen bg-gray-900">
+                        <Routes>
+                          {/* Public Routes */}
+                          <Route
+                            path="/auth"
+                            element={
+                              <PublicRoute>
+                                <AuthPage />
+                              </PublicRoute>
+                            }
+                          />
 
-                        {/* Protected Routes */}
-                        <Route
-                          path="/*"
-                          element={
-                            <ProtectedRoute>
-                              <Layout>
-                                <Routes>
-                                  <Route path="/dashboard" element={<DashboardPage />} />
-                                  <Route path="/projects" element={<ProjectsPage />} />
-                                  <Route path="/api-keys" element={<ApiKeysPage />} />
-                                  <Route path="/chat" element={<ChatPage />} />
-                                  <Route path="/memory" element={<MemoryPage />} />
-                                  <Route path="/feedback" element={<FeedbackPage />} />
-                                  <Route path="/settings" element={<SettingsPage />} />
-                                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                                </Routes>
-                              </Layout>
-                            </ProtectedRoute>
-                          }
-                        />
-                      </Routes>
-                    </div>
-                  </Router>
+                          {/* Protected Routes */}
+                          <Route
+                            path="/*"
+                            element={
+                              <ProtectedRoute>
+                                <Layout>
+                                  <Routes>
+                                    <Route path="/dashboard" element={<DashboardPage />} />
+                                    <Route path="/projects" element={<ProjectsPage />} />
+                                    <Route path="/api-keys" element={<ApiKeysPage />} />
+                                    <Route path="/chat" element={<ChatPage />} />
+                                    <Route path="/memory" element={<MemoryPage />} />
+                                    <Route path="/feedback" element={<FeedbackPage />} />
+                                    <Route path="/settings" element={<SettingsPage />} />
+                                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                                    <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                                  </Routes>
+                                </Layout>
+                              </ProtectedRoute>
+                            }
+                          />
+                        </Routes>
+                      </div>
+                    </Router>
+                  </ChatProvider>
                 </FeedbackProvider>
               </MemoryProvider>
             </ProjectProvider>
