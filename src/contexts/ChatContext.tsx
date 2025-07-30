@@ -210,17 +210,17 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
 
       // Call AI service instead of direct API
-      const aiResponse = await aiService.sendMessage({
-        prompt: content,
-        provider: selectedProvider,
-        userId: user.id,
-        projectId: currentSession.id,
-        conversationHistory
-      });
+      const aiResponse = await aiService.sendMessage(
+  content,                    // message (not prompt!)
+  selectedProvider,          // provider
+  user.id,                   // userId
+  currentSession.id,         // projectId
+  conversationHistory        // conversationHistory
+);
 
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: aiResponse.content,
+        content: aiResponse.response,
         role: 'assistant',
         timestamp: new Date().toISOString(),
         provider: selectedProvider,
