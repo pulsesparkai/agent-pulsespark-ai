@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useChat } from '../contexts/ChatContext';
 import { useApiKeys } from '../contexts/ApiKeysContext';
-import { LoadingSpinner } from '../components/Shared/LoadingSpinner';
 import { Bot, User, MessageSquare, Send } from 'lucide-react';
 
 export const ChatPage: React.FC = () => {
@@ -29,12 +28,14 @@ export const ChatPage: React.FC = () => {
           {apiKeys.length > 0 && (
             <select
               value={selectedProvider}
-              onChange={(e) => setSelectedProvider(e.target.value as any)}
+              onChange={(e) => setSelectedProvider(e.target.value)}
               className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-white text-sm"
             >
-              {apiKeys.map(key => (
-                <option key={key.id} value={key.provider}>{key.provider}</option>
-              ))}
+              <option value="OpenAI">OpenAI</option>
+              <option value="Claude">Claude</option>
+              <option value="Mistral">Mistral</option>
+              <option value="Grok">Grok</option>
+              <option value="DeepSeek">DeepSeek</option>
             </select>
           )}
         </div>
@@ -79,8 +80,8 @@ export const ChatPage: React.FC = () => {
             <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center">
               <Bot className="w-4 h-4 text-white" />
             </div>
-            <div className="bg-gray-700 px-4 py-2 rounded-lg">
-              <LoadingSpinner size="sm" />
+            <div className="bg-gray-700 px-4 py-2 rounded-lg text-gray-100">
+              AI is typing...
             </div>
           </div>
         )}
@@ -100,9 +101,10 @@ export const ChatPage: React.FC = () => {
           <button
             type="submit"
             disabled={!input.trim() || loading || apiKeys.length === 0}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <Send className="w-5 h-5" />
+            Send
           </button>
         </div>
         {apiKeys.length === 0 && (
