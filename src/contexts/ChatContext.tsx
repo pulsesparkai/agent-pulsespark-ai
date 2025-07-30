@@ -6,7 +6,7 @@ import { useApiKeys } from './ApiKeysContext';
 import { useNotification } from './NotificationContext';
 import { useMemoryContext } from './MemoryContext';
 import { decryptApiKey } from '../lib/encryption';
-import { API_CONFIG } from '../lib/config';
+import { API_CONFIG, APP_CONFIG } from '../lib/config';
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
@@ -25,6 +25,7 @@ interface ChatProviderProps {
 export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<ApiKeyProvider>('OpenAI');
@@ -43,79 +44,222 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
   /**
    * Load or create a chat session for the current user
-   * Loads the most recent session or creates a new one if none exists
    */
   const loadChatHistory = async () => {
     if (!user) return;
+    
+    setLoading(true);
+    setError(null);
 
     try {
-      // Get or create current session
-      let { data: sessions, error: sessionError } = await supabase
+      // Get all sessions
+      const { data: sessions, error: sessionError } = await supabase
         .from('chat_sessions')
         .select('*')
         .eq('user_id', user.id)
-        .order('updated_at', { ascending: false })
-        .limit(1);
+        .order('updated_at', { ascending: false });
 
       if (sessionError) throw sessionError;
 
+      setChatSessions(sessions || []);
+
+      // Get or create current session
       let session = sessions?.[0];
-      
+
       if (!session) {
-        // Create new session
+        // Create a new session if none exist
         const { data: newSession, error: createError } = await supabase
           .from('chat_sessions')
           .insert({
             user_id: user.id,
             title: 'New Chat',
-            messages: []
+            model_type: selectedProvider.toLowerCase()
           })
           .select()
           .single();
 
         if (createError) throw createError;
         session = newSession;
+        setChatSessions([session]);
       }
 
       setCurrentSession(session);
-      setMessages(session.messages || []);
+
+      // Load messages for the session
+      if (session) {
+        const { data: sessionMessages, error: messagesError } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('session_id', session.id)
+          .order('created_at', { ascending: true });
+
+        if (messagesError) throw messagesError;
+
+        const formattedMessages: ChatMessage[] = (sessionMessages || []).map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          role: msg.role,
+          timestamp: msg.created_at,
+          provider: msg.model_type as ApiKeyProvider
+        }));
+
+        setMessages(formattedMessages);
+      }
     } catch (err: any) {
-      setError(err.message);
+      console.error('Failed to load chat history:', err);
+      setError('Failed to load chat history');
       showNotification('Failed to load chat history', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
   /**
-   * Save the current chat session to Supabase
-   * Updates the messages and timestamp in the database
+   * Create a new chat session
+   */
+  const createNewSession = async (title: string) => {
+    if (!user) return;
+
+    try {
+      const { data: newSession, error } = await supabase
+        .from('chat_sessions')
+        .insert({
+          user_id: user.id,
+          title,
+          model_type: selectedProvider.toLowerCase()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setChatSessions([newSession, ...chatSessions]);
+      setCurrentSession(newSession);
+      setMessages([]);
+      
+      showNotification('New chat session created', 'success');
+    } catch (err: any) {
+      console.error('Failed to create session:', err);
+      showNotification('Failed to create new session', 'error');
+    }
+  };
+
+  /**
+   * Delete a chat session
+   */
+  const deleteSession = async (sessionId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .delete()
+        .eq('id', sessionId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Remove from local state
+      setChatSessions(chatSessions.filter(s => s.id !== sessionId));
+      
+      if (currentSession?.id === sessionId) {
+        const remainingSessions = chatSessions.filter(s => s.id !== sessionId);
+        if (remainingSessions.length > 0) {
+          setCurrentSession(remainingSessions[0]);
+          // Load messages for the new current session
+          loadMessagesForSession(remainingSessions[0].id);
+        } else {
+          setCurrentSession(null);
+          setMessages([]);
+        }
+      }
+
+      showNotification('Chat session deleted', 'success');
+    } catch (err: any) {
+      console.error('Failed to delete session:', err);
+      showNotification('Failed to delete session', 'error');
+    }
+  };
+
+  /**
+   * Load messages for a specific session
+   */
+  const loadMessagesForSession = async (sessionId: string) => {
+    try {
+      const { data: sessionMessages, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      const formattedMessages: ChatMessage[] = (sessionMessages || []).map(msg => ({
+        id: msg.id,
+        content: msg.content,
+        role: msg.role,
+        timestamp: msg.created_at,
+        provider: msg.model_type as ApiKeyProvider
+      }));
+
+      setMessages(formattedMessages);
+    } catch (err: any) {
+      console.error('Failed to load messages:', err);
+      showNotification('Failed to load messages', 'error');
+    }
+  };
+
+  /**
+   * Switch to a different session
+   */
+  const switchSession = async (session: ChatSession) => {
+    setCurrentSession(session);
+    await loadMessagesForSession(session.id);
+  };
+
+  /**
+   * Save the current session state
    */
   const saveSession = async (updatedMessages: ChatMessage[]) => {
     if (!currentSession || !user) return;
 
     try {
-      const { error } = await supabase
+      // Update session's updated_at timestamp
+      await supabase
         .from('chat_sessions')
-        .update({
-          messages: updatedMessages,
-          updated_at: new Date().toISOString()
-        })
+        .update({ updated_at: new Date().toISOString() })
         .eq('id', currentSession.id);
 
-      if (error) throw error;
+      // Save new messages to database
+      const messagesToSave = updatedMessages.filter(
+        msg => !messages.find(m => m.id === msg.id)
+      );
+
+      for (const msg of messagesToSave) {
+        await supabase
+          .from('chat_messages')
+          .insert({
+            session_id: currentSession.id,
+            user_id: user.id,
+            content: msg.content,
+            role: msg.role,
+            model_type: msg.provider?.toLowerCase() || selectedProvider.toLowerCase()
+          });
+      }
     } catch (err: any) {
       console.error('Failed to save session:', err);
     }
   };
 
   /**
-   * Send a message to the AI and handle the response
-   * Integrates with the backend API to get AI responses
-   * Enhanced with memory context for intelligent responses
+   * Send a message to the AI
    */
   const sendMessage = async (content: string) => {
-    if (!user || !currentSession) return;
+    if (!user || !currentSession) {
+      showNotification('Please create or select a chat session', 'error');
+      return;
+    }
 
-    // Find API key for selected provider
     const apiKey = apiKeys.find(key => key.provider === selectedProvider);
     if (!apiKey) {
       showNotification(`No API key found for ${selectedProvider}`, 'error');
@@ -125,49 +269,35 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     setLoading(true);
     setError(null);
 
-    // Add user message immediately for better UX
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      content,
-      role: 'user',
-      timestamp: new Date().toISOString(),
-      provider: selectedProvider
-    };
-
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
-
     try {
-      // Debug logging for API connection
-      console.log('🔗 API URL:', API_CONFIG.BASE_URL);
-      const session = await supabase.auth.getSession();
-      console.log('🔑 Auth token present:', !!session.data.session?.access_token);
-      console.log('👤 User ID:', user?.id);
-      console.log('🤖 Selected Provider:', selectedProvider);
-      
-      // Search for relevant memories to enhance context
+      // Add user message
+      const userMessage: ChatMessage = {
+        id: Date.now().toString(),
+        content,
+        role: 'user',
+        timestamp: new Date().toISOString(),
+        provider: selectedProvider
+      };
+
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
+
+      // Get memory context if available
       let memoryContext = '';
       try {
-        const relevantMemories = await searchMemory(content, {
-          topK: 3,
-          threshold: 0.7,
-          projectId: undefined // Remove currentProject dependency for now
-        });
-        
-        if (relevantMemories.length > 0) {
-          memoryContext = '\n\nRelevant context from your memory:\n' + 
-            relevantMemories.map(memory => 
-              `- ${memory.text.substring(0, 200)}${memory.text.length > 200 ? '...' : ''}`
-            ).join('\n');
+        const memories = await searchMemory(content, 5);
+        if (memories.length > 0) {
+          memoryContext = '\n\nRelevant context from memory:\n' + 
+            memories.map(m => `- ${m.content}${m.metadata ? ` (${JSON.stringify(m.metadata)})` : ''}`).join('\n');
         }
       } catch (memoryError) {
         console.warn('Failed to fetch memory context:', memoryError);
       }
 
-      // Decrypt the API key for backend use
+      // Decrypt the API key
       const decryptedKey = decryptApiKey(apiKey.encrypted_key);
 
-      // Prepare conversation history (last 10 messages for context)
+      // Prepare conversation history
       const conversationHistory = updatedMessages
         .slice(-10)
         .map(msg => ({
@@ -175,14 +305,15 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
           content: msg.content
         }));
 
-      console.log('Making API call to:', `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GENERATE}`);
+      // Get session for auth
+      const { data: { session } } = await supabase.auth.getSession();
       
       // Call backend API
       const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GENERATE}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.data.session?.access_token}`,
+          'Authorization': `Bearer ${session?.access_token}`,
           'Origin': APP_CONFIG.FRONTEND_URL
         },
         body: JSON.stringify({
@@ -194,17 +325,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         })
       });
 
-      console.log('API response status:', response.status);
-      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ API Error Response:', errorText);
-        console.error('❌ Status:', response.status);
         throw new Error(`API Error ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('API response received:', data);
 
       // Add AI response
       const aiMessage: ChatMessage = {
@@ -222,80 +348,27 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     } catch (err: any) {
       console.error('Chat API error:', err);
       setError(err.message);
-      
-      // Add error message to chat
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content: 'Sorry, I encountered an error generating a response. Please try again.',
-        role: 'assistant',
-        timestamp: new Date().toISOString(),
-        provider: selectedProvider,
-        error: err.message
-      };
-
-      const errorMessages = [...updatedMessages, errorMessage];
-      setMessages(errorMessages);
-      showNotification(err.message, 'error');
+      showNotification('Failed to send message', 'error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  /**
-   * Retry the last AI message if it failed
-   * Removes the error message and resends the last user message
-   */
-  const retryLastMessage = async () => {
-    if (messages.length < 2) return;
-    
-    const lastUserMessage = [...messages].reverse().find(msg => msg.role === 'user');
-    if (!lastUserMessage) return;
-
-    // Remove last AI message if it was an error
-    const filteredMessages = messages.filter(msg => 
-      !(msg.role === 'assistant' && msg.timestamp > lastUserMessage.timestamp)
-    );
-    
-    setMessages(filteredMessages);
-    await sendMessage(lastUserMessage.content);
-  };
-
-  /**
-   * Clear the current chat session
-   * Removes all messages from the current session
-   */
-  const clearChat = async () => {
-    if (!currentSession) return;
-
-    try {
-      const { error } = await supabase
-        .from('chat_sessions')
-        .update({
-          messages: [],
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', currentSession.id);
-
-      if (error) throw error;
-
-      setMessages([]);
-      showNotification('Chat history cleared', 'success');
-    } catch (err: any) {
-      showNotification('Failed to clear chat history', 'error');
     }
   };
 
   const value: ChatContextType = {
     messages,
     currentSession,
+    chatSessions,
     loading,
     error,
     selectedProvider,
     setSelectedProvider,
     sendMessage,
-    clearChat,
     loadChatHistory,
-    retryLastMessage
+    createNewSession,
+    deleteSession,
+    switchSession,
+    setMessages,
+    setCurrentSession
   };
 
   return (
