@@ -11,13 +11,11 @@ export default defineConfig(({ mode }) => ({
     outDir: 'dist',
     sourcemap: mode === 'development',
     minify: mode === 'production' ? 'esbuild' : false,
+    target: 'esnext',
     rollupOptions: {
+      external: [],
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          supabase: ['@supabase/supabase-js'],
-          ui: ['lucide-react']
-        }
+        manualChunks: undefined,
       }
     }
   },
