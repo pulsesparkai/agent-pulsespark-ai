@@ -21,8 +21,6 @@
     }
   ],
   "env": {
-    "NODE_ENV": "production",
-    "VITE_API_URL": "https://api.pulsespark.ai",
-    "VITE_FRONTEND_URL": "https://agent.pulsespark.ai"
+    "NODE_ENV": "production"
   }
 }
