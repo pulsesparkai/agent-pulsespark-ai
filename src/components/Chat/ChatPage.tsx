@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useApiKeys } from '../../contexts/ApiKeysContext';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useChat } from '../../contexts/ChatContext';
 import { supabase } from '../../lib/supabase';
 import { LoadingSpinner } from '../Shared/LoadingSpinner';
 import { 
@@ -26,6 +27,7 @@ export const ChatPage: React.FC = () => {
   const { user } = useAuth();
   const { apiKeys } = useApiKeys();
   const { showNotification } = useNotification();
+  const { sendMessage: contextSendMessage } = useChat();
 
   // State management
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
@@ -151,14 +153,16 @@ export const ChatPage: React.FC = () => {
 
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
+    const messageContent = inputMessage;
     setInputMessage('');
 
     try {
-      // This component should use ChatContext for real API calls
-      // The actual API integration is handled in ChatContext
-      console.log('⚠️ This sendMessage should be replaced with ChatContext.sendMessage');
-      showNotification('Please use the main chat interface for AI responses', 'info');
-      return;
+      // Use the proper ChatContext sendMessage function
+      await contextSendMessage(messageContent);
+      
+      // The ChatContext will handle the AI response and update the session
+      // We just need to refresh our local state
+      await loadChatSessions();
 
     } catch (err: any) {
       showNotification('Failed to send message', 'error');
