@@ -3,6 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
 import { AuthProvider } from './contexts/AuthContext';
 import { ApiKeysProvider } from './contexts/ApiKeysContext';
+import { ProjectProvider } from './contexts/ProjectContext';
+import { MemoryProvider } from './contexts/MemoryContext';
+import { FeedbackProvider } from './contexts/FeedbackContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { AuthPage } from './pages/AuthPage';
@@ -62,27 +65,33 @@ function App() {
       <NotificationProvider>
         <AuthProvider>
           <ApiKeysProvider>
-            <ChatProvider>
-              <Router>
-                <div className="min-h-screen bg-gray-900">
-                  <Routes>
-                    <Route path="/auth" element={<AuthPage />} />
-                    <Route element={<ProtectedLayout />}>
-                      <Route path="/dashboard" element={<DashboardPage />} />
-                      <Route path="/projects" element={<ProjectsPage />} />
-                      <Route path="/api-keys" element={<ApiKeysPage />} />
-                      <Route path="/chat" element={<ChatPage />} />
-                      <Route path="/memory" element={<MemoryPage />} />
-                      <Route path="/feedback" element={<FeedbackPage />} />
-                      <Route path="/settings" element={<SettingsPage />} />
-                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                    </Route>
-                    <Route path="*" element={<Navigate to="/auth" replace />} />
-                  </Routes>
-                </div>
-              </Router>
-            </ChatProvider>
+            <ProjectProvider>
+              <MemoryProvider>
+                <FeedbackProvider>
+                  <ChatProvider>
+                    <Router>
+                      <div className="min-h-screen bg-gray-900">
+                        <Routes>
+                          <Route path="/auth" element={<AuthPage />} />
+                          <Route element={<ProtectedLayout />}>
+                            <Route path="/dashboard" element={<DashboardPage />} />
+                            <Route path="/projects" element={<ProjectsPage />} />
+                            <Route path="/api-keys" element={<ApiKeysPage />} />
+                            <Route path="/chat" element={<ChatPage />} />
+                            <Route path="/memory" element={<MemoryPage />} />
+                            <Route path="/feedback" element={<FeedbackPage />} />
+                            <Route path="/settings" element={<SettingsPage />} />
+                            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                          </Route>
+                          <Route path="*" element={<Navigate to="/auth" replace />} />
+                        </Routes>
+                      </div>
+                    </Router>
+                  </ChatProvider>
+                </FeedbackProvider>
+              </MemoryProvider>
+            </ProjectProvider>
           </ApiKeysProvider>
         </AuthProvider>
       </NotificationProvider>
