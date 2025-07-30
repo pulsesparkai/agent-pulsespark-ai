@@ -56,9 +56,17 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
 
+  // Debug user changes
   useEffect(() => {
-    loadChatSessions();
-  }, []);
+    console.log('ChatProvider - User changed:', user);
+  }, [user]);
+
+  // Load sessions when user is available
+  useEffect(() => {
+    if (user) {
+      loadChatSessions();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (currentSession) {
@@ -69,12 +77,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [currentSession]);
 
   const loadChatSessions = async () => {
+    if (!user) return;
+    
     setLoading(true);
     setError(null);
     try {
       const { data, error: sbError } = await supabase
         .from('chat_sessions')
         .select('*')
+        .eq('user_id', user.id)  // Filter by user
         .order('created_at', { ascending: false });
       if (sbError) throw sbError;
       setChatSessions(data || []);
@@ -106,31 +117,34 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-const createNewSession = async (title: string) => {
-  if (!user) return; // Add this check
-  
-  setLoading(true);
-  setError(null);
-  try {
-    const { data, error: sbError } = await supabase
-      .from('chat_sessions')
-      .insert({ 
-        title,
-        user_id: user.id  // Add this line!
-      })
-      .select();
-    if (sbError) throw sbError;
-    if (data?.[0]) {
-      setChatSessions(prev => [data[0], ...prev]);
-      setCurrentSession(data[0]);
-      setMessages([]);
+  const createNewSession = async (title: string) => {
+    if (!user) {
+      console.error('Cannot create session - no user');
+      return;
     }
-  } catch (err: any) {
-    setError(err.message || 'Failed to create session');
-  } finally {
-    setLoading(false);
-  }
-};
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error: sbError } = await supabase
+        .from('chat_sessions')
+        .insert({ 
+          title,
+          user_id: user.id
+        })
+        .select();
+      if (sbError) throw sbError;
+      if (data?.[0]) {
+        setChatSessions(prev => [data[0], ...prev]);
+        setCurrentSession(data[0]);
+        setMessages([]);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to create session');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const deleteSession = async (id: string) => {
     setLoading(true);
@@ -161,37 +175,36 @@ const createNewSession = async (title: string) => {
     await loadChatSessions();
   };
 
-  const getApiConfig = (provider: string) => {
-    switch (provider) {
-      case 'OpenAI':
-        return { url: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4o' };
-      case 'Claude':
-        return { url: 'https://api.anthropic.com/v1/messages', model: 'claude-3-5-sonnet-20240620', responseKey: 'content[0].text' };
-      case 'Mistral':
-        return { url: 'https://api.mistral.ai/v1/chat/completions', model: 'mistral-large-latest' };
-      case 'Grok':
-        return { url: 'https://api.x.ai/v1/chat/completions', model: 'grok-4' };
-      case 'DeepSeek':
-        return { url: 'https://api.deepseek.com/v1/chat/completions', model: 'deepseek-chat' };
-      default:
-        throw new Error('Unsupported provider');
+  const sendMessage = async (content: string) => {
+    console.log('=== SENDMESSAGE DEBUG ===');
+    console.log('User object:', user);
+    console.log('User ID:', user?.id);
+    console.log('Selected Provider:', selectedProvider);
+    console.log('Current Session:', currentSession);
+    console.log('Content:', content);
+    
+    // Ensure user is loaded
+    if (!user || !user.id) {
+      console.error('User not loaded or missing ID');
+      showNotification('User not authenticated. Please refresh the page.', 'error');
+      return;
     }
-  };
-
-const sendMessage = async (content: string) => {
-  // Auto-create session if none exists
-  if (!currentSession) {
-    console.log('No current session, creating one...');
-    await createNewSession('Chat - ' + new Date().toLocaleDateString());
-    // Wait for state to update
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-  
-  if (!user) {
-    setError('User must be authenticated to send messages.');
-    return;
-  }
-  if (!content.trim()) return;
+    
+    // Auto-create session if none exists
+    if (!currentSession) {
+      console.log('No current session, creating one...');
+      await createNewSession('Chat - ' + new Date().toLocaleDateString());
+      // Wait for state to update
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Check if session was created
+      if (!currentSession) {
+        showNotification('Failed to create chat session. Please try again.', 'error');
+        return;
+      }
+    }
+    
+    if (!content.trim()) return;
     
     setLoading(true);
     setError(null);
@@ -207,7 +220,10 @@ const sendMessage = async (content: string) => {
 
     try {
       // Check if user has API key for selected provider
+      console.log('Checking API key for provider:', selectedProvider, 'and user:', user.id);
       const hasKey = await aiService.hasApiKey(selectedProvider, user.id);
+      console.log('Has API key:', hasKey);
+      
       if (!hasKey) {
         throw new Error(`No API key found for ${selectedProvider}. Please add your ${selectedProvider} API key in Settings.`);
       }
@@ -218,14 +234,14 @@ const sendMessage = async (content: string) => {
         content: m.content
       }));
 
-      // Call AI service instead of direct API
+      // Call AI service
       const aiResponse = await aiService.sendMessage(
-  content,                    // message (not prompt!)
-  selectedProvider,          // provider
-  user.id,                   // userId
-  currentSession.id,         // projectId
-  conversationHistory        // conversationHistory
-);
+        content,
+        selectedProvider,
+        user.id,
+        currentSession.id,
+        conversationHistory
+      );
 
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -238,8 +254,20 @@ const sendMessage = async (content: string) => {
 
       // Save messages to database
       await supabase.from('chat_messages').insert([
-        { ...userMessage, session_id: currentSession.id },
-        { ...aiMessage, session_id: currentSession.id },
+        { 
+          session_id: currentSession.id,
+          content: userMessage.content,
+          role: userMessage.role,
+          timestamp: userMessage.timestamp,
+          provider: userMessage.provider
+        },
+        { 
+          session_id: currentSession.id,
+          content: aiMessage.content,
+          role: aiMessage.role,
+          timestamp: aiMessage.timestamp,
+          provider: aiMessage.provider
+        }
       ]);
       
       showNotification('Message sent successfully', 'success');
@@ -260,7 +288,7 @@ const sendMessage = async (content: string) => {
       
       // Show helpful notification
       if (errorMessage.includes('No API key')) {
-        showNotification(`Please add your ${selectedProvider} API key in Settings`, 'error');
+        showNotification(`Please add your ${selectedProvider} API key in Settings → API Keys`, 'error');
       } else {
         showNotification(errorMessage, 'error');
       }
