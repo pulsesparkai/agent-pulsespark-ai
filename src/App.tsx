@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
-import { ErrorBoundary } from './components/Shared/ErrorBoundary';
 import { AuthProvider } from './contexts/AuthContext';
 import { ApiKeysProvider } from './contexts/ApiKeysContext';
 import { ProjectProvider } from './contexts/ProjectContext';
@@ -119,7 +118,6 @@ function App() {
 
   return (
     <ErrorBoundary>
-    <ErrorBoundary>
       <NotificationProvider>
         <AuthProvider>
           <ApiKeysProvider>
@@ -169,7 +167,6 @@ function App() {
           </ApiKeysProvider>
         </AuthProvider>
       </NotificationProvider>
-    </ErrorBoundary>
     </ErrorBoundary>
   );
 }
