@@ -29,8 +29,8 @@ interface DashboardStats {
 
 interface RecentActivity {
   id: string;
-  type: 'project' | 'chat' | 'memory' | 'api_key';
-  title: string;
+  type: 'message' | 'project' | 'api' | 'settings' | 'profile';
+  description: string;
   timestamp: string;
 }
 
@@ -117,13 +117,13 @@ export const DashboardPage: React.FC = () => {
         ...(projects || []).map(p => ({
           id: p.id,
           type: 'project' as const,
-          title: p.name,
+          description: p.name,
           timestamp: p.updated_at
         })),
         ...(chats || []).map(c => ({
           id: c.id,
-          type: 'chat' as const,
-          title: c.title,
+          type: 'message' as const,
+          description: c.title,
           timestamp: c.updated_at
         }))
       ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
@@ -153,9 +153,10 @@ export const DashboardPage: React.FC = () => {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'project': return FolderOpen;
-      case 'chat': return MessageSquare;
-      case 'memory': return Brain;
-      case 'api_key': return Key;
+      case 'message': return MessageSquare;
+      case 'api': return Key;
+      case 'settings': return Activity;
+      case 'profile': return Users;
       default: return Activity;
     }
   };
@@ -163,9 +164,10 @@ export const DashboardPage: React.FC = () => {
   const getActivityColor = (type: string) => {
     switch (type) {
       case 'project': return 'text-blue-600 bg-blue-50';
-      case 'chat': return 'text-green-600 bg-green-50';
-      case 'memory': return 'text-purple-600 bg-purple-50';
-      case 'api_key': return 'text-orange-600 bg-orange-50';
+      case 'message': return 'text-green-600 bg-green-50';
+      case 'api': return 'text-orange-600 bg-orange-50';
+      case 'settings': return 'text-gray-600 bg-gray-50';
+      case 'profile': return 'text-purple-600 bg-purple-50';
       default: return 'text-gray-600 bg-gray-50';
     }
   };
@@ -335,7 +337,7 @@ export const DashboardPage: React.FC = () => {
                           <Icon className="w-5 h-5" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-gray-900 truncate">{activity.title}</h3>
+                          <h3 className="font-medium text-gray-900 truncate">{activity.description}</h3>
                           <p className="text-sm text-gray-600">
                             {activity.type} • {formatTimestamp(activity.timestamp)}
                           </p>
