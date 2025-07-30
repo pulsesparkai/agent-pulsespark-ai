@@ -106,26 +106,31 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const createNewSession = async (title: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error: sbError } = await supabase
-        .from('chat_sessions')
-        .insert({ title })
-        .select();
-      if (sbError) throw sbError;
-      if (data?.[0]) {
-        setChatSessions(prev => [data[0], ...prev]);
-        setCurrentSession(data[0]);
-        setMessages([]);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to create session');
-    } finally {
-      setLoading(false);
+const createNewSession = async (title: string) => {
+  if (!user) return; // Add this check
+  
+  setLoading(true);
+  setError(null);
+  try {
+    const { data, error: sbError } = await supabase
+      .from('chat_sessions')
+      .insert({ 
+        title,
+        user_id: user.id  // Add this line!
+      })
+      .select();
+    if (sbError) throw sbError;
+    if (data?.[0]) {
+      setChatSessions(prev => [data[0], ...prev]);
+      setCurrentSession(data[0]);
+      setMessages([]);
     }
-  };
+  } catch (err: any) {
+    setError(err.message || 'Failed to create session');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const deleteSession = async (id: string) => {
     setLoading(true);
