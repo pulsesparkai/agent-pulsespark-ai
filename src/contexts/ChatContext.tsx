@@ -173,16 +173,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const sendMessage = async (content: string) => {
-    if (!currentSession) {
-      setError('No active session. Create one first.');
-      return;
-    }
-    if (!user) {
-      setError('User must be authenticated to send messages.');
-      return;
-    }
-    if (!content.trim()) return;
+const sendMessage = async (content: string) => {
+  // Auto-create session if none exists
+  if (!currentSession) {
+    console.log('No current session, creating one...');
+    await createNewSession('Chat - ' + new Date().toLocaleDateString());
+    // Wait for state to update
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  if (!user) {
+    setError('User must be authenticated to send messages.');
+    return;
+  }
+  if (!content.trim()) return;
     
     setLoading(true);
     setError(null);
