@@ -21,10 +21,9 @@ import { useAuth } from './contexts/AuthContext';
 import { LoadingSpinner } from './components/Shared/LoadingSpinner';
 
 /**
- * Protected Route Component
- * Redirects to auth page if user is not authenticated
+ * App Routes Component - This needs to be INSIDE the providers
  */
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const AppRoutes: React.FC = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -38,36 +37,41 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     );
   }
 
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route
+        path="/auth"
+        element={
+          user ? <Navigate to="/dashboard" replace /> : <AuthPage />
+        }
+      />
 
-  return <>{children}</>;
-};
-
-/**
- * Public Route Component
- * Redirects to dashboard if user is already authenticated
- */
-const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <LoadingSpinner size="lg" />
-          <p className="text-gray-400 mt-4">Loading PulseSpark...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (user) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return <>{children}</>;
+      {/* Protected Routes */}
+      <Route
+        path="/*"
+        element={
+          !user ? (
+            <Navigate to="/auth" replace />
+          ) : (
+            <Layout>
+              <Routes>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/projects" element={<ProjectsPage />} />
+                <Route path="/api-keys" element={<ApiKeysPage />} />
+                <Route path="/chat" element={<ChatPage />} />
+                <Route path="/memory" element={<MemoryPage />} />
+                <Route path="/feedback" element={<FeedbackPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </Layout>
+          )
+        }
+      />
+    </Routes>
+  );
 };
 
 /**
@@ -75,27 +79,6 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
  * Sets up routing, context providers, and error boundaries
  */
 function App() {
-  // Handle uncaught errors in production
-  React.useEffect(() => {
-    const handleError = (event: ErrorEvent) => {
-      console.error('Uncaught error:', event.error);
-      // In production, send to error monitoring service
-    };
-
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error('Unhandled promise rejection:', event.reason);
-      // In production, send to error monitoring service
-    };
-
-    window.addEventListener('error', handleError);
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
-
-    return () => {
-      window.removeEventListener('error', handleError);
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-    };
-  }, []);
-
   // Handle uncaught errors in production
   React.useEffect(() => {
     const handleError = (event: ErrorEvent) => {
@@ -128,39 +111,7 @@ function App() {
                   <ChatProvider>
                     <Router>
                       <div className="min-h-screen bg-gray-900">
-                        <Routes>
-                          {/* Public Routes */}
-                          <Route
-                            path="/auth"
-                            element={
-                              <PublicRoute>
-                                <AuthPage />
-                              </PublicRoute>
-                            }
-                          />
-
-                          {/* Protected Routes */}
-                          <Route
-                            path="/*"
-                            element={
-                              <ProtectedRoute>
-                                <Layout>
-                                  <Routes>
-                                    <Route path="/dashboard" element={<DashboardPage />} />
-                                    <Route path="/projects" element={<ProjectsPage />} />
-                                    <Route path="/api-keys" element={<ApiKeysPage />} />
-                                    <Route path="/chat" element={<ChatPage />} />
-                                    <Route path="/memory" element={<MemoryPage />} />
-                                    <Route path="/feedback" element={<FeedbackPage />} />
-                                    <Route path="/settings" element={<SettingsPage />} />
-                                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                                    <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                                  </Routes>
-                                </Layout>
-                              </ProtectedRoute>
-                            }
-                          />
-                        </Routes>
+                        <AppRoutes />
                       </div>
                     </Router>
                   </ChatProvider>
