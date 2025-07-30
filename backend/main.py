@@ -39,7 +39,7 @@ app.add_middleware(
         "https://*.vercel.app"
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -490,22 +490,46 @@ class AIProviderClient:
             )
 
 # Dependency for authentication (placeholder - integrate with your auth system)
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Validate user authentication token"""
-    # TODO: Implement actual token validation with your auth system
-    # For now, we'll accept any bearer token
-    if not credentials.credentials:
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
+    """Validate user authentication token using Supabase JWT"""
+    if not supabase:
+        raise HTTPException(
+            status_code=503,
+            detail="Authentication service unavailable"
+        )
+    
+    try:
+        response = supabase.auth.get_user(credentials.credentials)
+        if not response.user:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid authentication token"
+            )
+        
+        return {
+            "user_id": response.user.id,
+            "email": response.user.email,
+            "authenticated": True
+        }
+    except Exception as e:
+        logger.error(f"Authentication error: {e}")
         raise HTTPException(
             status_code=401,
-            detail="Invalid authentication credentials"
+            detail="Authentication failed"
         )
-    return {"user_id": "authenticated"}
 
 # Memory System Endpoints
 
 @app.post("/memory/save")
 async def save_memory(request: MemoryItem, current_user: dict = Depends(get_current_user)):
     """Save a memory item to the database with auto-extracted tech tags"""
+    # Validate user can only access their own data
+    if request.user_id != current_user["user_id"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: can only access your own data"
+        )
+    
     if not supabase:
         raise HTTPException(
             status_code=503,
@@ -551,6 +575,13 @@ async def save_memory(request: MemoryItem, current_user: dict = Depends(get_curr
 @app.post("/memory/search")
 async def search_memory(request: MemorySearchRequest, current_user: dict = Depends(get_current_user)):
     """Search memory items using PostgreSQL full-text search"""
+    # Validate user can only access their own data
+    if request.user_id != current_user["user_id"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: can only access your own data"
+        )
+    
     if not supabase:
         raise HTTPException(
             status_code=503,
@@ -589,6 +620,13 @@ async def get_recent_memories(
     current_user: dict = Depends(get_current_user)
 ):
     """Get recent memory items for a user"""
+    # Validate user can only access their own data
+    if user_id != current_user["user_id"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied: can only access your own data"
+        )
+    
     if not supabase:
         raise HTTPException(
             status_code=503,

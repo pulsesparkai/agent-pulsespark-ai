@@ -155,18 +155,10 @@ export const ChatPage: React.FC = () => {
 
     try {
       // Simulate AI response (replace with actual API call)
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content: `This is a simulated response from ${selectedProvider}. In production, this would connect to the actual AI API using your stored API key. The response would be generated based on your message: "${userMessage.content}"`,
-        role: 'assistant',
-        timestamp: new Date().toISOString(),
-        provider: selectedProvider
-      };
-
-      const finalMessages = [...updatedMessages, aiMessage];
-      setMessages(finalMessages);
+      // This should now use the ChatContext sendMessage function
+      // Remove simulation and let ChatContext handle the real API call
+      console.log('Using ChatContext sendMessage for real API calls');
+      return; // Let ChatContext handle the API call
 
       // Save to database
       await supabase

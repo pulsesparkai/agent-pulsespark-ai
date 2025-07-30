@@ -138,13 +138,19 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     setMessages(updatedMessages);
 
     try {
+      // Debug logging for API connection
+      console.log('API URL:', API_CONFIG.BASE_URL);
+      const session = await supabase.auth.getSession();
+      console.log('Auth token present:', !!session.data.session?.access_token);
+      console.log('API call starting...');
+      
       // Search for relevant memories to enhance context
       let memoryContext = '';
       try {
         const relevantMemories = await searchMemory(content, {
           topK: 3,
           threshold: 0.7,
-          projectId: currentProject?.id
+          projectId: undefined // Remove currentProject dependency for now
         });
         
         if (relevantMemories.length > 0) {
@@ -168,12 +174,14 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
           content: msg.content
         }));
 
+      console.log('Making API call to:', `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GENERATE}`);
+      
       // Call backend API
       const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.GENERATE}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Authorization': `Bearer ${session.data.session?.access_token}`,
           'Origin': APP_CONFIG.FRONTEND_URL
         },
         body: JSON.stringify({
@@ -185,12 +193,16 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         })
       });
 
+      console.log('API response status:', response.status);
+      
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('API error response:', errorData);
         throw new Error(errorData.error || 'Failed to generate response');
       }
 
       const data = await response.json();
+      console.log('API response received:', data);
 
       // Add AI response
       const aiMessage: ChatMessage = {
@@ -206,6 +218,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       await saveSession(finalMessages);
 
     } catch (err: any) {
+      console.error('Chat API error:', err);
       setError(err.message);
       
       // Add error message to chat
