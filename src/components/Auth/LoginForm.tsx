@@ -12,7 +12,6 @@ interface LoginFormProps {
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onToggleForm }) => {
   const navigate = useNavigate();
-  const navigate = useNavigate();
   // Form state management
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
