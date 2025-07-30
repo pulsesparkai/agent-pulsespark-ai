@@ -239,7 +239,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(errorMessage);
       
       // Add error message to chat
-      const errorMessage: ChatMessage = {
+      const errorChatMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         content: errorMessage,
         role: 'assistant',
@@ -247,7 +247,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         provider: selectedProvider,
         error: errorMessage
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev, errorChatMessage]);
       
       // Show helpful notification
       if (errorMessage.includes('No API key')) {
