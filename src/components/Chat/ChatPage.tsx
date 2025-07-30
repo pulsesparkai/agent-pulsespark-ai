@@ -222,7 +222,7 @@ export const ChatPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen bg-gray-900 flex">
+    <div className="h-full flex">
       {/* Sidebar - Chat Sessions */}
       <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
         {/* Sidebar Header */}

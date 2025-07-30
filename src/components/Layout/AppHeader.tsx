@@ -133,12 +133,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
   return (
     <>
-      {/* Main Header Bar - Fixed positioning with PulseSpark styling */}
-      <header className={`h-16 bg-gray-800 border-b border-gray-700 ${className}`}>
-        <div className="flex items-center justify-between px-6 h-full">
+      {/* Main Header Bar - Simplified without duplicate logo */}
+      <header className={`h-14 bg-gray-800 border-b border-gray-700 ${className}`}>
+        <div className="flex items-center justify-between px-4 h-full">
           
-          {/* Left Section - Logo and Mobile Menu */}
-          <div className="flex items-center gap-4">
+          {/* Left Section - Just mobile menu button */}
+          <div className="flex items-center">
             {/* Mobile Menu Button - Only visible on small screens */}
             {onMenuClick && (
               <button
@@ -149,196 +149,93 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 <Menu className="w-5 h-5" />
               </button>
             )}
-
-            {/* PulseSpark Logo - Clickable brand identifier */}
-            <div
-              onClick={handleLogoClick}
-              className="
-                rounded-lg w-10 h-10 bg-gradient-to-br from-green-600 to-green-700
-                flex items-center justify-center font-bold text-white
-                hover:from-green-500 hover:to-green-600 transition-all duration-200
-                transform hover:scale-105 focus:outline-none focus:ring-2 
-                focus:ring-green-500 focus:ring-offset-2
-              "
-              aria-label="PulseSpark - Go to dashboard"
-            >
-              PS
-            </div>
-
-            {/* Brand Text - Hidden on very small screens */}
-            <div className="hidden sm:block">
-              <h1 className="text-xl font-bold text-white">PulseSpark</h1>
-              <p className="text-xs text-gray-400 -mt-1">AI Agent Platform</p>
-            </div>
           </div>
 
-          {/* Center Section - Search Input (Desktop) */}
-          <div className="hidden md:block flex-1 max-w-md mx-8">
+          {/* Center Section - Search Bar */}
+          <div className="flex-1 max-w-2xl mx-4">
             <form onSubmit={handleSearchSubmit} className="relative">
-              <div className="relative">
-                {/* Search Icon */}
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-gray-400" />
-                </div>
-                
-                {/* Search Input */}
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="
-                    block w-full pl-10 pr-4 py-2 border border-gray-600 rounded-md
-                    text-white placeholder-gray-400 bg-gray-700
-                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent
-                    hover:border-gray-500 transition-colors
-                  "
-                  placeholder="Search projects, chats..."
-                  aria-label="Search projects and chats"
-                />
-              </div>
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search projects, chats..."
+                className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
             </form>
           </div>
 
-          {/* Right Section - Search Toggle (Mobile) and User Menu */}
-          <div className="flex items-center gap-3">
-            {/* Mobile Search Toggle Button */}
+          {/* Right Section - User Menu */}
+          <div className="relative" ref={userMenuRef}>
             <button
-              onClick={toggleMobileSearch}
-              className="p-2 text-gray-400 hover:text-white md:hidden transition-colors rounded-md hover:bg-gray-700"
-              aria-label="Toggle search"
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center gap-2 p-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
             >
-              <Search className="w-5 h-5" />
+              <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                {getUserInitials()}
+              </div>
+              <span className="hidden md:block text-sm">{user?.email?.split('@')[0]}</span>
             </button>
 
-            {/* User Avatar and Dropdown Menu */}
-            <div className="relative" ref={userMenuRef}>
-              {/* User Avatar Button */}
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="
-                  flex items-center gap-2 p-1 rounded-full hover:bg-gray-700 
-                  transition-colors focus:outline-none focus:ring-2 
-                  focus:ring-green-500 focus:ring-offset-2
-                "
-                aria-label="User menu"
-                aria-expanded={showUserMenu}
-                aria-haspopup="true"
-              >
-                {/* Avatar Circle with Initials */}
-                <div className="
-                  w-8 h-8 bg-gradient-to-br from-gray-400 to-gray-500 
-                  rounded-full flex items-center justify-center text-white
-                  text-sm font-medium
-                ">
-                  {getUserInitials()}
-                </div>
+            {/* User Dropdown Menu */}
+            {showUserMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg py-1 z-50">
+                <button
+                  onClick={() => handleMenuItemClick('profile')}
+                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors text-left"
+                >
+                  <User className="w-4 h-4" />
+                  Profile Settings
+                </button>
                 
-                {/* User Email - Hidden on small screens */}
-                <span className="hidden lg:block text-sm text-gray-300 font-medium">
-                  {user?.email}
-                </span>
-              </button>
-
-              {/* User Dropdown Menu */}
-              {showUserMenu && (
-                <div className="
-                  absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg 
-                  border border-gray-200 py-1 z-50
-                ">
-                  {/* Profile Menu Item */}
-                  <button
-                    onClick={() => handleMenuItemClick('profile')}
-                    className="
-                      flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-300 
-                      hover:bg-gray-700 hover:text-white transition-colors text-left
-                    "
-                  >
-                    <User className="w-4 h-4" />
-                    Profile Settings
-                  </button>
-
-                  {/* Settings Menu Item */}
-                  <button
-                    onClick={() => handleMenuItemClick('settings')}
-                    className="
-                      flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-300 
-                      hover:bg-gray-700 hover:text-white transition-colors text-left
-                    "
-                  >
-                    <Settings className="w-4 h-4" />
-                    Settings
-                  </button>
-
-                  {/* Divider */}
-                  <div className="border-t border-gray-100 my-1" />
-
-                  {/* Logout Menu Item */}
-                  <button
-                    onClick={() => handleMenuItemClick('logout')}
-                    className="
-                      flex items-center gap-3 w-full px-4 py-2 text-sm text-red-400 
-                      hover:bg-red-900/20 hover:text-red-300 transition-colors text-left
-                    "
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sign Out
-                  </button>
-                </div>
-              )}
-            </div>
+                <button
+                  onClick={() => handleMenuItemClick('settings')}
+                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors text-left"
+                >
+                  <Settings className="w-4 h-4" />
+                  Settings
+                </button>
+                
+                <div className="border-t border-gray-700 my-1" />
+                
+                <button
+                  onClick={() => handleMenuItemClick('logout')}
+                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors text-left"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      {/* Mobile Search Overlay - Slides down from header on mobile */}
+      {/* Mobile Search Overlay - Only show if mobile search is active */}
       {showMobileSearch && (
-        <div 
-          ref={mobileSearchRef}
-          className="
-            fixed top-16 left-0 right-0 z-40 bg-gray-800 border-b border-gray-700 
-            shadow-md md:hidden
-          "
-        >
+        <div ref={mobileSearchRef} className="fixed top-14 left-0 right-0 z-40 bg-gray-800 border-b border-gray-700 shadow-md md:hidden">
           <div className="px-6 py-4">
             <form onSubmit={handleSearchSubmit} className="relative">
-              <div className="relative">
-                {/* Mobile Search Icon */}
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-gray-400" />
-                </div>
-                
-                {/* Mobile Search Input */}
-                <input
-                  id="mobile-search-input"
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="
-                    block w-full pl-10 pr-12 py-3 border border-gray-600 rounded-md
-                    text-white placeholder-gray-400 bg-gray-700
-                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent
-                  "
-                  placeholder="Search projects, chats..."
-                  aria-label="Search projects and chats"
-                />
-                
-                {/* Close Mobile Search Button */}
-                <button
-                  type="button"
-                  onClick={toggleMobileSearch}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
-                  aria-label="Close search"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                id="mobile-search-input"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="block w-full pl-10 pr-12 py-3 border border-gray-600 rounded-md text-white placeholder-gray-400 bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Search projects, chats..."
+              />
+              <button
+                type="button"
+                onClick={toggleMobileSearch}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </form>
           </div>
         </div>
       )}
-
-      {/* Spacer div to prevent content from hiding behind fixed header */}
-      <div className="h-0" />
     </>
   );
 };

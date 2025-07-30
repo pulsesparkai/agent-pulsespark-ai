@@ -15,20 +15,20 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-900 flex">
+    <div className="h-screen bg-gray-900 flex overflow-hidden">
       {/* Sidebar */}
       <SidebarNavigation 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)} 
       />
       
-      {/* Main Content */}
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col lg:ml-64">
         {/* Header */}
         <AppHeader onMenuClick={() => setSidebarOpen(true)} />
         
-        {/* Page Content */}
-        <main className="flex-1">
+        {/* Page Content - Takes remaining height */}
+        <main className="flex-1 overflow-hidden">
           {children}
         </main>
       </div>
