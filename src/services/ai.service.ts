@@ -41,7 +41,7 @@ class AIService {
 
       // If the key is encrypted, you'll need to decrypt it here
       // For now, assuming it's stored in plain text (you should encrypt it!)
-      return data.encrypted_key;
+      return atob(data.encrypted_key);
     } catch (error) {
       console.error('Error fetching API key:', error);
       return null;
@@ -83,15 +83,17 @@ class AIService {
     };
 
     try {
-      const response = await fetch(`${this.backendUrl}/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add bearer token if you have one from Supabase auth
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-        },
-        body: JSON.stringify(requestBody),
-      });
+  // Get session first
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  const response = await fetch(`${this.backendUrl}/generate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': session ? `Bearer ${session.access_token}` : ''
+    },
+    body: JSON.stringify(requestBody),
+  });
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
