@@ -82,19 +82,19 @@ export interface ChatSession {
 
 export interface ChatContextType {
   messages: ChatMessage[];
-  currentSession: ChatSession | null;
-  chatSessions: ChatSession[];
   loading: boolean;
   error: string | null;
-  selectedProvider: ApiKeyProvider;
-  setSelectedProvider: (provider: ApiKeyProvider) => void;
+  selectedProvider: string;
+  setSelectedProvider: (provider: string) => void;
   sendMessage: (content: string) => Promise<void>;
+  currentSession: any;
   loadChatHistory: () => Promise<void>;
   createNewSession: (title: string) => Promise<void>;
-  deleteSession: (sessionId: string) => Promise<void>;
-  switchSession: (session: ChatSession) => Promise<void>;
+  deleteSession: (id: string) => Promise<void>;
+  switchSession: (session: any) => Promise<void>;
+  chatSessions: any[];
   setMessages: (messages: ChatMessage[]) => void;
-  setCurrentSession: (session: ChatSession | null) => void;
+  setCurrentSession: (session: any) => void;
 }
 
 // Project and File Management Types

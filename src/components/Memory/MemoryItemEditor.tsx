@@ -1,37 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useApiKeys } from '../../contexts/ApiKeysContext';
-import { useNotification } from '../../contexts/NotificationContext';
-import { supabase } from '../../lib/supabase';
-import { LoadingSpinner } from '../Shared/LoadingSpinner';
-import { 
-  MessageSquare, 
-  Plus, 
-  Send, 
-  Bot, 
-  User, 
-  Trash2,
-  Search,
-  X
-} from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useApiKeys } from '../../contexts/ApiKeysContext';
-import { useNotification } from '../../contexts/NotificationContext';
-import { supabase } from '../../lib/supabase';
-import { LoadingSpinner } from '../Shared/LoadingSpinner';
-import { 
-  MessageSquare, 
-  Plus, 
-  Send, 
-  Bot, 
-  User, 
-  Trash2,
-  Edit2,
-  Search,
-  Filter
-} from 'lucide-react';
-import { ChatMessage, ChatSession, ApiKeyProvider } from '../../types';
+import React from 'react';
+import { MessageSquare } from 'lucide-react';
 
 /**
  * MemoryItemEditor Component
