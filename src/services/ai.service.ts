@@ -32,7 +32,6 @@ class AIService {
         .select('encrypted_key')
         .eq('user_id', userId)
         .eq('provider', provider)
-        .eq('is_active', true)
         .single();
 
       if (error || !data) {
