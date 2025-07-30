@@ -38,11 +38,7 @@ const ProtectedLayout: React.FC = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  return (
-    <Layout>
-      <Outlet />
-    </Layout>
-  );
+  return <Layout><Outlet /></Layout>;
 };
 
 function App() {
@@ -88,6 +84,7 @@ function App() {
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
                             <Route path="*" element={<Navigate to="/dashboard" replace />} />
                           </Route>
+                          <Route path="*" element={<Navigate to="/auth" replace />} />
                         </Routes>
                       </div>
                     </Router>
@@ -101,7 +98,5 @@ function App() {
     </ErrorBoundary>
   );
 }
-
-export default App;
 
 export default App;
