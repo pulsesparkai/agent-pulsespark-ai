@@ -283,12 +283,14 @@ export const DashboardPage: React.FC = () => {
                     color: 'bg-orange-500 hover:bg-orange-600',
                     path: '/api-keys'
                   },
-                  { 
-                    icon: MessageSquare, 
-                    label: 'Start Chat', 
-                    color: 'bg-green-500 hover:bg-green-600',
-                    path: '/chat'
-                  },
+ icon: MessageSquare, 
+  label: 'Start Chat', 
+  color: 'bg-green-500 hover:bg-green-600',
+  path: '/chat',
+  onClick: async () => {
+    // This will trigger auto-session creation when they send first message
+    navigate('/chat');
+  },
                   { 
                     icon: Brain, 
                     label: 'Add Memory', 
