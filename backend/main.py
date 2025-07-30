@@ -491,11 +491,31 @@ class AIProviderClient:
 
 # Dependency for authentication (placeholder - integrate with your auth system)
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
-    """Validate user authentication token using Supabase JWT"""
+    """Validate user authentication token and return user information from auth.users"""
     if not supabase:
         raise HTTPException(
             status_code=503,
             detail="Authentication service unavailable"
+        )
+    
+    try:
+        response = supabase.auth.get_user(credentials.credentials)
+        if not response.user:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid authentication token"
+            )
+        
+        return {
+            "user_id": response.user.id,
+            "email": response.user.email,
+            "authenticated": True
+        }
+    except Exception as e:
+        logger.error(f"Authentication error: {e}")
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication failed"
         )
     
     try:
@@ -523,6 +543,13 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 @app.post("/memory/save")
 async def save_memory(request: MemoryItem, current_user: dict = Depends(get_current_user)):
     """Save a memory item to the database with auto-extracted tech tags"""
+    # Security: Verify user can only access their own data
+    if request.user_id != current_user["user_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: can only access your own data"
+        )
+    
     # Validate user can only access their own data
     if request.user_id != current_user["user_id"]:
         raise HTTPException(
@@ -575,6 +602,13 @@ async def save_memory(request: MemoryItem, current_user: dict = Depends(get_curr
 @app.post("/memory/search")
 async def search_memory(request: MemorySearchRequest, current_user: dict = Depends(get_current_user)):
     """Search memory items using PostgreSQL full-text search"""
+    # Security: Verify user can only access their own data
+    if request.user_id != current_user["user_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: can only access your own data"
+        )
+    
     # Validate user can only access their own data
     if request.user_id != current_user["user_id"]:
         raise HTTPException(
@@ -620,6 +654,13 @@ async def get_recent_memories(
     current_user: dict = Depends(get_current_user)
 ):
     """Get recent memory items for a user"""
+    # Security: Verify user can only access their own data
+    if user_id != current_user["user_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: can only access your own data"
+        )
+    
     # Validate user can only access their own data
     if user_id != current_user["user_id"]:
         raise HTTPException(

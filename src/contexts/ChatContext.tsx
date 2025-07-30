@@ -139,10 +139,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
     try {
       // Debug logging for API connection
-      console.log('API URL:', API_CONFIG.BASE_URL);
+      console.log('🔗 API URL:', API_CONFIG.BASE_URL);
       const session = await supabase.auth.getSession();
-      console.log('Auth token present:', !!session.data.session?.access_token);
-      console.log('API call starting...');
+      console.log('🔑 Auth token present:', !!session.data.session?.access_token);
+      console.log('👤 User ID:', user?.id);
+      console.log('🤖 Selected Provider:', selectedProvider);
       
       // Search for relevant memories to enhance context
       let memoryContext = '';
@@ -196,9 +197,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       console.log('API response status:', response.status);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API error response:', errorData);
-        throw new Error(errorData.error || 'Failed to generate response');
+        const errorText = await response.text();
+        console.error('❌ API Error Response:', errorText);
+        console.error('❌ Status:', response.status);
+        throw new Error(`API Error ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();

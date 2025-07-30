@@ -154,23 +154,11 @@ export const ChatPage: React.FC = () => {
     setInputMessage('');
 
     try {
-      // Simulate AI response (replace with actual API call)
-      // This should now use the ChatContext sendMessage function
-      // Remove simulation and let ChatContext handle the real API call
-      console.log('Using ChatContext sendMessage for real API calls');
-      return; // Let ChatContext handle the API call
-
-      // Save to database
-      await supabase
-        .from('chat_sessions')
-        .update({
-          messages: finalMessages,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', currentSession.id);
-
-      // Update current session in state
-      setCurrentSession(prev => prev ? { ...prev, messages: finalMessages, updated_at: new Date().toISOString() } : null);
+      // This component should use ChatContext for real API calls
+      // The actual API integration is handled in ChatContext
+      console.log('⚠️ This sendMessage should be replaced with ChatContext.sendMessage');
+      showNotification('Please use the main chat interface for AI responses', 'info');
+      return;
 
     } catch (err: any) {
       showNotification('Failed to send message', 'error');
