@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
 import { AuthProvider } from './contexts/AuthContext';
 import { ApiKeysProvider } from './contexts/ApiKeysContext';
@@ -20,10 +20,7 @@ import { Layout } from './components/Layout/Layout';
 import { useAuth } from './contexts/AuthContext';
 import { LoadingSpinner } from './components/Shared/LoadingSpinner';
 
-/**
- * App Routes Component - This needs to be INSIDE the providers
- */
-const AppRoutes: React.FC = () => {
+const ProtectedLayout: React.FC = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -37,58 +34,25 @@ const AppRoutes: React.FC = () => {
     );
   }
 
-  return (
-    <Routes>
-      {/* Public Routes */}
-      <Route
-        path="/auth"
-        element={
-          user ? <Navigate to="/dashboard" replace /> : <AuthPage />
-        }
-      />
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
 
-      {/* Protected Routes */}
-      <Route
-        path="/*"
-        element={
-          !user ? (
-            <Navigate to="/auth" replace />
-          ) : (
-            <Layout>
-              <Routes>
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/projects" element={<ProjectsPage />} />
-                <Route path="/api-keys" element={<ApiKeysPage />} />
-                <Route path="/chat" element={<ChatPage />} />
-                <Route path="/memory" element={<MemoryPage />} />
-                <Route path="/feedback" element={<FeedbackPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-              </Routes>
-            </Layout>
-          )
-        }
-      />
-    </Routes>
+  return (
+    <Layout>
+      <Outlet />
+    </Layout>
   );
 };
 
-/**
- * Main App Component
- * Sets up routing, context providers, and error boundaries
- */
 function App() {
-  // Handle uncaught errors in production
   React.useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       console.error('Uncaught error:', event.error);
-      // In production, send to error monitoring service
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       console.error('Unhandled promise rejection:', event.reason);
-      // In production, send to error monitoring service
     };
 
     window.addEventListener('error', handleError);
@@ -111,7 +75,20 @@ function App() {
                   <ChatProvider>
                     <Router>
                       <div className="min-h-screen bg-gray-900">
-                        <AppRoutes />
+                        <Routes>
+                          <Route path="/auth" element={<AuthPage />} />
+                          <Route element={<ProtectedLayout />}>
+                            <Route path="/dashboard" element={<DashboardPage />} />
+                            <Route path="/projects" element={<ProjectsPage />} />
+                            <Route path="/api-keys" element={<ApiKeysPage />} />
+                            <Route path="/chat" element={<ChatPage />} />
+                            <Route path="/memory" element={<MemoryPage />} />
+                            <Route path="/feedback" element={<FeedbackPage />} />
+                            <Route path="/settings" element={<SettingsPage />} />
+                            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                          </Route>
+                        </Routes>
                       </div>
                     </Router>
                   </ChatProvider>
@@ -124,5 +101,7 @@ function App() {
     </ErrorBoundary>
   );
 }
+
+export default App;
 
 export default App;
