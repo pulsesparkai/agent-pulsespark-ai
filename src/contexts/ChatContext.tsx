@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase'; // Adjust path if needed
+import { supabase } from '../lib/supabase';
 import { useApiKeys } from './ApiKeysContext';
-import { decryptApiKey } from '../lib/encryption'; // Assume this exists; implement if not
+import { decryptApiKey } from '../lib/encryption';
 
 interface ChatMessage {
   id: string;
@@ -53,12 +53,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
 
-  // Load chat sessions on mount
   useEffect(() => {
     loadChatSessions();
   }, []);
 
-  // Load messages when session changes
   useEffect(() => {
     if (currentSession) {
       loadMessagesForSession(currentSession.id);
@@ -81,7 +79,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentSession(data[0]);
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to load sessions');
     } finally {
       setLoading(false);
     }
@@ -99,7 +97,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (sbError) throw sbError;
       setMessages(data || []);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to load messages');
     } finally {
       setLoading(false);
     }
@@ -120,7 +118,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setMessages([]);
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to create session');
     } finally {
       setLoading(false);
     }
@@ -141,7 +139,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setMessages([]);
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to delete session');
     } finally {
       setLoading(false);
     }
@@ -160,11 +158,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       case 'OpenAI':
         return { url: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4o' };
       case 'Claude':
-        return { url: 'https://api.anthropic.com/v1/messages', model: 'claude-3-5-sonnet-20240620' };
+        return { url: 'https://api.anthropic.com/v1/messages', model: 'claude-3-5-sonnet-20240620', responseKey: 'content[0].text' };
       case 'Mistral':
         return { url: 'https://api.mistral.ai/v1/chat/completions', model: 'mistral-large-latest' };
       case 'Grok':
-        return { url: 'https://api.x.ai/v1/chat/completions', model: 'grok-4' }; // Use Grok 4 model; for API details, visit https://docs.x.ai/docs/api-reference
+        return { url: 'https://api.x.ai/v1/chat/completions', model: 'grok-4' };
       case 'DeepSeek':
         return { url: 'https://api.deepseek.com/v1/chat/completions', model: 'deepseek-chat' };
       default:
@@ -174,9 +172,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const sendMessage = async (content: string) => {
     if (!currentSession) {
-      setError('No active session');
+      setError('No active session. Create one first.');
       return;
     }
+    if (!content.trim()) return;
     setLoading(true);
     setError(null);
 
@@ -190,14 +189,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      // Find and decrypt API key
       const selectedKey = apiKeys.find(k => k.provider === selectedProvider);
       if (!selectedKey) throw new Error(`No API key for ${selectedProvider}`);
       const apiKey = decryptApiKey(selectedKey.encrypted_key);
 
-      const { url, model } = getApiConfig(selectedProvider);
+      const { url, model, responseKey = 'choices[0].message.content' } = getApiConfig(selectedProvider);
 
-      // Prepare messages for API (include history)
       const apiMessages = messages.map(m => ({ role: m.role, content: m.content })).concat({ role: 'user', content });
 
       const response = await fetch(url, {
@@ -209,13 +206,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({
           model,
           messages: apiMessages,
+          temperature: 0.7, // Adjustable
+          max_tokens: 1024, // Adjustable
         }),
       });
 
       if (!response.ok) throw new Error(`API error: ${response.statusText}`);
 
       const data = await response.json();
-      const aiContent = data.choices?.[0]?.message?.content || data.content; // Adjust for Claude (uses 'content' instead of choices)
+      const aiContent = responseKey.split('.').reduce((obj, key) => obj?.[key], data) || 'No response';
 
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -226,14 +225,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       setMessages(prev => [...prev, aiMessage]);
 
-      // Save to Supabase
       await supabase.from('chat_messages').insert([
         { ...userMessage, session_id: currentSession.id },
         { ...aiMessage, session_id: currentSession.id },
       ]);
     } catch (err: any) {
-      setError(err.message);
-      // Optionally remove the user message on error
+      setError(err.message || 'Failed to send message');
     } finally {
       setLoading(false);
     }
