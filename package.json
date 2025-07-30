@@ -8,8 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "vite preview --port 4173 --host",
-    "type-check": "npx tsc --noEmit"
+    "start": "vite preview --port 4173 --host"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
