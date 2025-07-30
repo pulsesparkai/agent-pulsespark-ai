@@ -126,9 +126,22 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({ children }) =>
       setCurrentProject(data);
       setProjects(prev => [data, ...prev]);
       showNotification('Project created successfully', 'success');
+      
+      // Log successful creation for debugging
+      console.log('✅ Project created successfully:', {
+        id: data.id,
+        name: data.name,
+        user_id: data.user_id
+      });
     } catch (err: any) {
+      console.error('❌ Project creation failed:', err);
       setError(err.message);
       showNotification('Failed to create project', 'error');
+      
+      // Provide helpful error message
+      if (err.message.includes('RLS')) {
+        showNotification('Database permission error. Please contact support.', 'error');
+      }
     } finally {
       setLoading(false);
     }

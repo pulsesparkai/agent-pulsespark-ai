@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { useApiKeys } from './ApiKeysContext';
-import { decryptApiKey } from '../lib/encryption';
+import { useAuth } from './AuthContext';
+import { useNotification } from './NotificationContext';
+import { aiService } from '../services/ai.service';
 
 interface ChatMessage {
   id: string;
@@ -9,6 +10,7 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   timestamp: string;
   provider?: string;
+  error?: string;
 }
 
 interface ChatSession {
@@ -45,7 +47,8 @@ export const useChat = () => {
 };
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { apiKeys } = useApiKeys();
+  const { user } = useAuth();
+  const { showNotification } = useNotification();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -175,7 +178,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError('No active session. Create one first.');
       return;
     }
+    if (!user) {
+      setError('User must be authenticated to send messages.');
+      return;
+    }
     if (!content.trim()) return;
+    
     setLoading(true);
     setError(null);
 
@@ -189,48 +197,64 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      const selectedKey = apiKeys.find(k => k.provider === selectedProvider);
-      if (!selectedKey) throw new Error(`No API key for ${selectedProvider}`);
-      const apiKey = decryptApiKey(selectedKey.encrypted_key);
+      // Check if user has API key for selected provider
+      const hasKey = await aiService.hasApiKey(selectedProvider, user.id);
+      if (!hasKey) {
+        throw new Error(`No API key found for ${selectedProvider}. Please add your ${selectedProvider} API key in Settings.`);
+      }
 
-      const { url, model, responseKey = 'choices[0].message.content' } = getApiConfig(selectedProvider);
+      // Convert messages to AI service format
+      const conversationHistory = messages.map(m => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content
+      }));
 
-      const apiMessages = messages.map(m => ({ role: m.role, content: m.content })).concat({ role: 'user', content });
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model,
-          messages: apiMessages,
-          temperature: 0.7, // Adjustable
-          max_tokens: 1024, // Adjustable
-        }),
+      // Call AI service instead of direct API
+      const aiResponse = await aiService.sendMessage({
+        prompt: content,
+        provider: selectedProvider,
+        userId: user.id,
+        projectId: currentSession.id,
+        conversationHistory
       });
-
-      if (!response.ok) throw new Error(`API error: ${response.statusText}`);
-
-      const data = await response.json();
-      const aiContent = responseKey.split('.').reduce((obj, key) => obj?.[key], data) || 'No response';
 
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: aiContent,
+        content: aiResponse.content,
         role: 'assistant',
         timestamp: new Date().toISOString(),
         provider: selectedProvider,
       };
       setMessages(prev => [...prev, aiMessage]);
 
+      // Save messages to database
       await supabase.from('chat_messages').insert([
         { ...userMessage, session_id: currentSession.id },
         { ...aiMessage, session_id: currentSession.id },
       ]);
+      
+      showNotification('Message sent successfully', 'success');
     } catch (err: any) {
-      setError(err.message || 'Failed to send message');
+      const errorMessage = err.message || 'Failed to send message';
+      setError(errorMessage);
+      
+      // Add error message to chat
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: errorMessage,
+        role: 'assistant',
+        timestamp: new Date().toISOString(),
+        provider: selectedProvider,
+        error: errorMessage
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      
+      // Show helpful notification
+      if (errorMessage.includes('No API key')) {
+        showNotification(`Please add your ${selectedProvider} API key in Settings`, 'error');
+      } else {
+        showNotification(errorMessage, 'error');
+      }
     } finally {
       setLoading(false);
     }

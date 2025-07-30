@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { AuthContextType, User } from '../types';
 import { useErrorHandler } from '../hooks/useErrorHandler';
@@ -54,8 +55,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               email: session.user.email!,
               created_at: session.user.created_at!
             });
+            
+            // Auto-redirect to dashboard on successful login
+            if (event === 'SIGNED_IN') {
+              window.location.href = '/dashboard';
+            }
           } else {
             setUser(null);
+            
+            // Redirect to auth page on sign out
+            if (event === 'SIGNED_OUT') {
+              window.location.href = '/auth';
+            }
           }
         } catch (error) {
           console.error('Error handling auth state change:', error);

@@ -107,6 +107,16 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               <p className="text-xs text-red-600">
                 Error: {message.error}
               </p>
+              {message.error.includes('No API key') && (
+                <div className="mt-2">
+                  <a
+                    href="/api-keys"
+                    className="text-xs text-red-700 hover:text-red-800 underline"
+                  >
+                    Add API Key in Settings →
+                  </a>
+                </div>
+              )}
               {showRetry && onRetry && (
                 <button
                   onClick={onRetry}

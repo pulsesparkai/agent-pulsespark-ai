@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { LoadingSpinner } from '../Shared/LoadingSpinner';
@@ -9,6 +10,7 @@ interface LoginFormProps {
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onToggleForm }) => {
+  const navigate = useNavigate();
   // Form state management
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -76,6 +78,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleForm }) => {
     try {
       await signIn(email.trim(), password);
       showNotification('Welcome back! Successfully signed in.', 'success');
+      // Explicit redirect to dashboard after successful login
+      navigate('/dashboard', { replace: true });
     } catch (error: any) {
       // Handle authentication errors
       const errorMessage = error.message || 'Failed to sign in. Please try again.';
