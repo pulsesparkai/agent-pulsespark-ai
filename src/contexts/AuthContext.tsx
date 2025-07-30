@@ -56,10 +56,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               created_at: session.user.created_at!
             });
             
-            // Auto-redirect to dashboard on successful login
-            if (event === 'SIGNED_IN') {
-              window.location.href = '/dashboard';
-            }
           } else {
             setUser(null);
             

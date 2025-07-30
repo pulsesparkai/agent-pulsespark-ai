@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { LoadingSpinner } from '../Shared/LoadingSpinner';
@@ -9,6 +10,7 @@ interface SignupFormProps {
 }
 
 export const SignupForm: React.FC<SignupFormProps> = ({ onToggleForm }) => {
+  const navigate = useNavigate();
   // Form state management
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -116,8 +118,12 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onToggleForm }) => {
     try {
       await signUp(email.trim(), password);
       showNotification('Account created successfully! Please check your email to verify your account.', 'success');
+      
       // Switch to login form after successful signup
-      setTimeout(() => onToggleForm(), 2000);
+      setTimeout(() => {
+        onToggleForm();
+      }, 2000);
+      
     } catch (error: any) {
       // Handle authentication errors
       const errorMessage = error.message || 'Failed to create account. Please try again.';
