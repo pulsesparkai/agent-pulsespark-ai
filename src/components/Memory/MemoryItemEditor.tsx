@@ -500,6 +500,10 @@ export const MemoryItemEditor: React.FC = () => {
                 Create Session
               </button>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="text-center py-12">
