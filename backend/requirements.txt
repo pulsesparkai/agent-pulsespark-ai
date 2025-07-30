@@ -16,6 +16,7 @@ python-dotenv==1.0.0
 python-multipart==0.0.6  # For form data handling
 python-jose[cryptography]==3.3.0  # For JWT token handling (if needed)
 passlib[bcrypt]==1.7.4  # For password hashing (if needed)
+supabase==2.9.1
 
 # Development dependencies (optional)
 pytest==7.4.3

@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field, validator
 from typing import List, Dict, Any, Optional
+from supabase import create_client, Client
 import httpx
 import asyncio
 import logging
@@ -84,6 +85,19 @@ class GenerateResponse(BaseModel):
     timestamp: str
     tokens_used: Optional[int] = None
 
+class MemoryItem(BaseModel):
+    user_id: str = Field(..., description="User UUID")
+    project_id: Optional[str] = Field(None, description="Optional project UUID")
+    text: str = Field(..., min_length=1, max_length=10000, description="Text content")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadata")
+    tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+
+class MemorySearchRequest(BaseModel):
+    user_id: str = Field(..., description="User UUID")
+    query: str = Field(..., min_length=1, description="Search query")
+    project_id: Optional[str] = Field(None, description="Optional project filter")
+    limit: int = Field(default=5, ge=1, le=20, description="Number of results")
+
 class ErrorResponse(BaseModel):
     """Error response model"""
     error: str
@@ -142,6 +156,16 @@ PROVIDER_CONFIGS = {
         "temperature": 0.7
     }
 }
+
+# Supabase configuration for memory system
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+else:
+    supabase = None
+    print("Warning: Supabase not configured - memory features will be disabled")
 
 class AIProviderClient:
     """Base class for AI provider clients with common functionality"""
@@ -476,6 +500,120 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             detail="Invalid authentication credentials"
         )
     return {"user_id": "authenticated"}
+
+# Memory System Endpoints
+
+@app.post("/memory/save")
+async def save_memory(request: MemoryItem, current_user: dict = Depends(get_current_user)):
+    """Save a memory item to the database with auto-extracted tech tags"""
+    if not supabase:
+        raise HTTPException(
+            status_code=503,
+            detail="Memory system not available - Supabase not configured"
+        )
+    
+    try:
+        # Auto-extract tech tags from text if none provided
+        tech_terms = ['react', 'vue', 'angular', 'javascript', 'typescript', 'python', 'java', 'api', 'database', 'authentication', 'jwt', 'oauth', 'css', 'html', 'nodejs', 'express', 'mongodb', 'postgresql', 'mysql', 'redis', 'docker', 'aws', 'github', 'git', 'bug', 'error', 'fix', 'component', 'hook', 'state', 'props']
+        
+        if not request.tags:
+            words = request.text.lower().split()
+            request.tags = list(set([word for word in words if word in tech_terms]))
+        
+        # Save to Supabase memory_items table
+        result = supabase.table("memory_items").insert({
+            "user_id": request.user_id,
+            "project_id": request.project_id,
+            "text": request.text,
+            "metadata": request.metadata,
+            "tags": request.tags
+        }).execute()
+        
+        if not result.data:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to save memory item"
+            )
+        
+        return {
+            "status": "success", 
+            "memory_id": result.data[0]["id"], 
+            "tags_extracted": request.tags
+        }
+        
+    except Exception as e:
+        logger.error(f"Error saving memory: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save memory: {str(e)}"
+        )
+
+@app.post("/memory/search")
+async def search_memory(request: MemorySearchRequest, current_user: dict = Depends(get_current_user)):
+    """Search memory items using PostgreSQL full-text search"""
+    if not supabase:
+        raise HTTPException(
+            status_code=503,
+            detail="Memory system not available - Supabase not configured"
+        )
+    
+    try:
+        # Build PostgreSQL full-text search query
+        query_builder = supabase.table("memory_items").select("*").eq("user_id", request.user_id)
+        
+        if request.project_id:
+            query_builder = query_builder.eq("project_id", request.project_id)
+        
+        # Use PostgreSQL text search
+        query_builder = query_builder.text_search("text", request.query)
+        result = query_builder.order("created_at", desc=True).limit(request.limit).execute()
+        
+        return {
+            "memories": result.data, 
+            "count": len(result.data), 
+            "query": request.query
+        }
+        
+    except Exception as e:
+        logger.error(f"Error searching memories: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to search memories: {str(e)}"
+        )
+
+@app.get("/memory/recent/{user_id}")
+async def get_recent_memories(
+    user_id: str, 
+    project_id: Optional[str] = None, 
+    limit: int = 10, 
+    current_user: dict = Depends(get_current_user)
+):
+    """Get recent memory items for a user"""
+    if not supabase:
+        raise HTTPException(
+            status_code=503,
+            detail="Memory system not available - Supabase not configured"
+        )
+    
+    try:
+        query_builder = supabase.table("memory_items").select("*").eq("user_id", user_id)
+        
+        if project_id:
+            query_builder = query_builder.eq("project_id", project_id)
+        
+        result = query_builder.order("created_at", desc=True).limit(limit).execute()
+        
+        return {
+            "memories": result.data, 
+            "count": len(result.data)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting recent memories: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get recent memories: {str(e)}"
+        )
 
 # Main endpoint
 @app.post("/generate", response_model=GenerateResponse)
