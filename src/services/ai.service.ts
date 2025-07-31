@@ -22,11 +22,12 @@ export interface GenerateResponse {
   tokens_used?: number;
 }
 
-// Map frontend provider names to backend enum values
+// UPDATED: Map frontend provider names to backend enum values - Added DeepSeek-R1
 const PROVIDER_MAPPING: Record<string, string> = {
   'OpenAI': 'openai',
   'Claude': 'claude', 
   'DeepSeek': 'deepseek',
+  'DeepSeek-R1': 'deepseek-r1',  // NEW: Add DeepSeek R1 mapping
   'Grok': 'grok',
   'Mistral': 'mistral'
 };
@@ -39,15 +40,18 @@ class AIService {
    */
   async hasApiKey(provider: ApiKeyProvider, userId: string): Promise<boolean> {
     try {
+      // UPDATED: DeepSeek-R1 uses the same API key as DeepSeek
+      const keyProvider = provider === 'DeepSeek-R1' ? 'DeepSeek' : provider;
+      
       const { data, error } = await supabase
         .from('api_keys')
         .select('id')
         .eq('user_id', userId)
-        .eq('provider', provider)
+        .eq('provider', keyProvider)
         .single();
 
       if (error) {
-        console.log('No API key found for provider:', provider);
+        console.log('No API key found for provider:', keyProvider);
         return false;
       }
 
@@ -63,11 +67,14 @@ class AIService {
    */
   private async getApiKey(provider: ApiKeyProvider, userId: string): Promise<string> {
     try {
+      // UPDATED: DeepSeek-R1 uses the same API key as DeepSeek
+      const keyProvider = provider === 'DeepSeek-R1' ? 'DeepSeek' : provider;
+      
       const { data, error } = await supabase
         .from('api_keys')
         .select('encrypted_key')
         .eq('user_id', userId)
-        .eq('provider', provider)
+        .eq('provider', keyProvider)
         .single();
 
       if (error || !data) {
