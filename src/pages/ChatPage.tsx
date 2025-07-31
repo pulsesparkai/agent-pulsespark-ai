@@ -4,13 +4,14 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Plus, MessageSquare, Settings, Trash2 } from 'lucide-react';
+import { Send, Bot, User, Plus, MessageSquare, Settings, Trash2, Brain } from 'lucide-react';
 import { useChatContext } from '../contexts/ChatContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useApiKeys } from '../contexts/ApiKeysContext';
 import { useNotification } from '../contexts/NotificationContext';
 
-const AVAILABLE_PROVIDERS = ['OpenAI', 'Claude', 'DeepSeek', 'Grok', 'Mistral'];
+// UPDATED: Added DeepSeek-R1 to available providers
+const AVAILABLE_PROVIDERS = ['OpenAI', 'Claude', 'DeepSeek', 'DeepSeek-R1', 'Grok', 'Mistral'];
 
 export const ChatPage: React.FC = () => {
   const [input, setInput] = useState('');
@@ -54,10 +55,18 @@ export const ChatPage: React.FC = () => {
     await sendMessage(messageContent);
   };
 
-  // Handle provider selection
+  // UPDATED: Handle provider selection with enhanced notifications
   const handleProviderChange = (provider: string) => {
     setSelectedProvider(provider);
-    showNotification(`Switched to ${provider}`, 'info');
+    
+    // Show different notifications for DeepSeek models
+    if (provider === 'DeepSeek-R1') {
+      showNotification('Switched to DeepSeek R1 - Advanced reasoning model with thinking process', 'info');
+    } else if (provider === 'DeepSeek') {
+      showNotification('Switched to DeepSeek V3 - Fast general chat model', 'info');
+    } else {
+      showNotification(`Switched to ${provider}`, 'info');
+    }
   };
 
   // Handle new session creation
@@ -81,6 +90,39 @@ export const ChatPage: React.FC = () => {
       hour: '2-digit', 
       minute: '2-digit' 
     });
+  };
+
+  // NEW: Get provider badge styling
+  const getProviderBadge = (provider: string) => {
+    switch (provider) {
+      case 'OpenAI': 
+        return { color: 'bg-green-600 text-green-100', icon: null };
+      case 'Claude': 
+        return { color: 'bg-orange-600 text-orange-100', icon: null };
+      case 'DeepSeek': 
+        return { color: 'bg-blue-600 text-blue-100', icon: null };
+      case 'DeepSeek-R1': 
+        return { color: 'bg-purple-600 text-purple-100', icon: <Brain className="w-3 h-3" /> };
+      case 'Grok': 
+        return { color: 'bg-gray-600 text-gray-100', icon: null };
+      case 'Mistral': 
+        return { color: 'bg-red-600 text-red-100', icon: null };
+      default: 
+        return { color: 'bg-gray-600 text-gray-100', icon: null };
+    }
+  };
+
+  // NEW: Get provider description
+  const getProviderDescription = (provider: string) => {
+    switch (provider) {
+      case 'OpenAI': return 'GPT models for general chat';
+      case 'Claude': return 'Anthropic\'s conversational AI';
+      case 'DeepSeek': return 'DeepSeek V3 - Fast general chat';
+      case 'DeepSeek-R1': return 'DeepSeek R1-0528 - Advanced reasoning with thinking process';
+      case 'Grok': return 'X.AI\'s conversational model';
+      case 'Mistral': return 'Mistral\'s language models';
+      default: return 'AI language model';
+    }
   };
 
   return (
@@ -119,6 +161,13 @@ export const ChatPage: React.FC = () => {
                 <option value="">No API keys configured</option>
               )}
             </select>
+            
+            {/* NEW: Provider description */}
+            {selectedProvider && availableProviders.length > 0 && (
+              <p className="text-xs text-gray-400">
+                {getProviderDescription(selectedProvider)}
+              </p>
+            )}
             
             {availableProviders.length === 0 && (
               <p className="text-xs text-red-400 flex items-center gap-1">
@@ -180,9 +229,25 @@ export const ChatPage: React.FC = () => {
               <h1 className="text-xl font-semibold text-white">
                 {currentSession?.title || 'PulseSpark AI Chat'}
               </h1>
-              <p className="text-sm text-gray-400">
-                Using {selectedProvider} • {messages.length} messages
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-sm text-gray-400">
+                  {messages.length} messages
+                </p>
+                {/* NEW: Enhanced provider badge */}
+                {selectedProvider && availableProviders.length > 0 && (
+                  <div className="flex items-center gap-1">
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getProviderBadge(selectedProvider).color}`}>
+                      {getProviderBadge(selectedProvider).icon}
+                      {selectedProvider}
+                    </span>
+                    {selectedProvider === 'DeepSeek-R1' && (
+                      <span className="text-xs text-purple-400 font-medium">
+                        🧠 Advanced Reasoning
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             
             {error && (
@@ -199,12 +264,28 @@ export const ChatPage: React.FC = () => {
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <Bot className="w-16 h-16 mb-4 opacity-50" />
               <h3 className="text-xl font-semibold mb-2">Ready to chat!</h3>
-              <p className="text-center max-w-md">
+              <p className="text-center max-w-md mb-4">
                 {availableProviders.length > 0
                   ? `Start a conversation with ${selectedProvider}. Ask me anything!`
                   : 'Please add an API key in Settings to start chatting.'
                 }
               </p>
+              
+              {/* NEW: DeepSeek R1 features showcase */}
+              {selectedProvider === 'DeepSeek-R1' && (
+                <div className="p-4 bg-purple-900/30 border border-purple-700/50 rounded-lg text-sm text-purple-200 max-w-md">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Brain className="w-4 h-4" />
+                    <span className="font-medium">DeepSeek R1 Features:</span>
+                  </div>
+                  <ul className="text-left space-y-1 text-xs">
+                    <li>• Advanced reasoning and thinking process</li>
+                    <li>• Better for complex math and logic problems</li>
+                    <li>• Enhanced code analysis capabilities</li>
+                    <li>• Up to 32K tokens for detailed responses</li>
+                  </ul>
+                </div>
+              )}
             </div>
           ) : (
             messages.map((message) => (
@@ -213,8 +294,16 @@ export const ChatPage: React.FC = () => {
                 className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {message.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-white" />
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    message.provider === 'DeepSeek-R1' 
+                      ? 'bg-gradient-to-r from-purple-500 to-purple-700' 
+                      : 'bg-gradient-to-r from-blue-500 to-purple-600'
+                  }`}>
+                    {message.provider === 'DeepSeek-R1' ? (
+                      <Brain className="w-4 h-4 text-white" />
+                    ) : (
+                      <Bot className="w-4 h-4 text-white" />
+                    )}
                   </div>
                 )}
                 
@@ -227,12 +316,16 @@ export const ChatPage: React.FC = () => {
                     }`}
                   >
                     <div className="whitespace-pre-wrap">{message.content}</div>
-                    <div className={`text-xs mt-1 opacity-75 ${
-                      message.role === 'user' ? 'text-right' : 'text-left'
+                    <div className={`text-xs mt-1 opacity-75 flex items-center gap-2 ${
+                      message.role === 'user' ? 'justify-end' : 'justify-start'
                     }`}>
-                      {formatTime(message.timestamp)}
+                      <span>{formatTime(message.timestamp)}</span>
+                      {/* NEW: Enhanced provider badge in messages */}
                       {message.provider && message.role === 'assistant' && (
-                        <span className="ml-2">• {message.provider}</span>
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${getProviderBadge(message.provider).color}`}>
+                          {getProviderBadge(message.provider).icon}
+                          {message.provider}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -249,13 +342,25 @@ export const ChatPage: React.FC = () => {
 
           {loading && (
             <div className="flex gap-3 justify-start">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-                <Bot className="w-4 h-4 text-white" />
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                selectedProvider === 'DeepSeek-R1' 
+                  ? 'bg-gradient-to-r from-purple-500 to-purple-700' 
+                  : 'bg-gradient-to-r from-blue-500 to-purple-600'
+              }`}>
+                {selectedProvider === 'DeepSeek-R1' ? (
+                  <Brain className="w-4 h-4 text-white" />
+                ) : (
+                  <Bot className="w-4 h-4 text-white" />
+                )}
               </div>
               <div className="bg-gray-700 px-4 py-2 rounded-lg text-gray-100">
                 <div className="flex items-center gap-2">
                   <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-                  {selectedProvider} is thinking...
+                  {selectedProvider === 'DeepSeek-R1' ? (
+                    <span>🧠 {selectedProvider} is thinking deeply...</span>
+                  ) : (
+                    <span>{selectedProvider} is thinking...</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -273,7 +378,9 @@ export const ChatPage: React.FC = () => {
               onChange={(e) => setInput(e.target.value)}
               placeholder={
                 availableProviders.length > 0 
-                  ? "Type a message..." 
+                  ? selectedProvider === 'DeepSeek-R1'
+                    ? "Ask me a complex reasoning question..."
+                    : "Type a message..." 
                   : "Add an API key to start chatting"
               }
               disabled={loading || availableProviders.length === 0}
