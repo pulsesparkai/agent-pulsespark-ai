@@ -79,7 +79,7 @@ const PROVIDER_CONFIGS: Record<AIProvider, Omit<ProviderConfig, 'apiKey'>> = {
   },
   DeepSeek: {
     name: 'DeepSeek',
-    baseUrl: 'https://api.deepseek.com/v1',
+    baseUrl: 'https://api.deepseek.com/',
     defaultModel: 'deepseek-chat',
     maxTokens: 4000
   },
