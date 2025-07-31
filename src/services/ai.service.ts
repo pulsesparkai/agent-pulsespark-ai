@@ -8,10 +8,10 @@ export interface ChatMessage {
 }
 
 export interface GenerateRequest {
-  user_id: string;  // Changed from userId
+  user_id: string;                       // matches backend “user_id”
   prompt: string;
-  conversation_history: ChatMessage[];  // Changed from conversationHistory
-  api_provider: string;  // Changed from provider
+  conversation_history: ChatMessage[];   // matches backend “conversation_history”
+  api_provider: string;                  // matches backend “api_provider”
   api_key: string;
 }
 
@@ -23,7 +23,8 @@ export interface GenerateResponse {
 }
 
 class AIService {
-  private backendUrl = import.meta.env.VITE_API_URL || 'https://api.pulsespark.ai';
+  // 🔒 hard-code your prod URL here
+  private backendUrl = 'https://api.pulsespark.ai';
 
   async getUserApiKey(provider: string, userId: string): Promise<string | null> {
     try {
@@ -39,11 +40,10 @@ class AIService {
         return null;
       }
 
-      // If the key is encrypted, you'll need to decrypt it here
-      // For now, assuming it's stored in plain text (you should encrypt it!)
+      // if you ever encrypt, decrypt here. For now assume plain-text base64.
       return atob(data.encrypted_key);
-    } catch (error) {
-      console.error('Error fetching API key:', error);
+    } catch (err) {
+      console.error('Error fetching API key:', err);
       return null;
     }
   }
@@ -55,87 +55,86 @@ class AIService {
     projectId?: string,
     conversationHistory: ChatMessage[] = []
   ): Promise<GenerateResponse> {
-    // Get user's API key for the selected provider
+    // 1) fetch the user’s stored key
     const apiKey = await this.getUserApiKey(provider, userId);
-    
     if (!apiKey) {
-      throw new Error(`No API key found for ${provider}. Please add your ${provider} API key in Settings → API Keys.`);
+      throw new Error(
+        `No API key found for ${provider}. Please add your ${provider} key in Settings → API Keys.`
+      );
     }
 
-    // Map provider names to match backend enum
+    // 2) map UI “DeepSeek” → backend “deepseek”, etc
     const providerMap: Record<string, string> = {
-      'OpenAI': 'openai',
-      'Claude': 'claude',
-      'DeepSeek': 'deepseek',
-      'Grok': 'grok',
-      'Mistral': 'mistral'
+      OpenAI: 'openai',
+      Claude: 'claude',
+      DeepSeek: 'deepseek',
+      Grok: 'grok',
+      Mistral: 'mistral',
     };
-
     const apiProvider = providerMap[provider] || provider.toLowerCase();
 
-    // Build request matching backend structure exactly
+    // 3) build exactly what your FastAPI expects
     const requestBody: GenerateRequest = {
       user_id: userId,
       prompt: message,
       conversation_history: conversationHistory,
       api_provider: apiProvider,
-      api_key: apiKey
+      api_key: apiKey,
     };
 
     try {
-  // Get session first
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  const response = await fetch(`${this.backendUrl}/generate`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': session ? `Bearer ${session.access_token}` : ''
-    },
-    body: JSON.stringify(requestBody),
-  });
+      // grab the Supabase session token to auth your FastAPI
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      // 🔍 debug log so you can confirm it’s actually firing
+      console.log('📡 AIService calling:', this.backendUrl, '/generate');
+
+      const response = await fetch(`${this.backendUrl}/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: session ? `Bearer ${session.access_token}` : '',
+        },
+        body: JSON.stringify(requestBody),
+      });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-        
-        // Handle specific error cases
+        const errPayload = await response.json().catch(() => ({ detail: 'Unknown error' }));
         if (response.status === 401) {
-          throw new Error('Invalid API key. Please check your API key in Settings.');
+          throw new Error('Invalid API key. Please check your Settings.');
         } else if (response.status === 429) {
-          throw new Error('Rate limit exceeded. Please try again later.');
+          throw new Error('Rate limit exceeded. Try again later.');
         } else if (response.status === 503) {
-          throw new Error('Service temporarily unavailable. Please try again.');
+          throw new Error('Service unavailable. Please try again.');
         }
-        
-        throw new Error(error.detail || error.error || `Failed to get response from ${provider}`);
+        throw new Error(errPayload.detail || errPayload.error || `Failed to get response`);
       }
 
       const data: GenerateResponse = await response.json();
       return data;
-    } catch (error: any) {
-      console.error('AI Service Error:', error);
-      
-      // Re-throw with user-friendly message
-      if (error.message.includes('fetch')) {
-        throw new Error('Network error. Please check your connection and try again.');
+    } catch (err: any) {
+      console.error('AI Service Error:', err);
+      if (err.message.includes('fetch')) {
+        throw new Error('Network error. Check your connection.');
       }
-      
-      throw error;
+      throw err;
     }
   }
 
   async hasApiKey(provider: string, userId: string): Promise<boolean> {
-    const apiKey = await this.getUserApiKey(provider, userId);
-    return !!apiKey;
+    const key = await this.getUserApiKey(provider, userId);
+    return !!key;
   }
 
   private getDefaultModel(provider: string): string {
     const models: Record<string, string> = {
-      'openai': 'gpt-3.5-turbo',
-      'claude': 'claude-3-sonnet-20240229',
-      'deepseek': 'deepseek-chat',
-      'grok': 'grok-beta',
-      'mistral': 'mistral-medium'
+      openai: 'gpt-3.5-turbo',
+      claude: 'claude-3-sonnet-20240229',
+      deepseek: 'deepseek-chat',
+      grok: 'grok-beta',
+      mistral: 'mistral-medium',
     };
     return models[provider.toLowerCase()] || 'gpt-3.5-turbo';
   }
