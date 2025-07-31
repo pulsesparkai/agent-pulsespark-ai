@@ -282,11 +282,7 @@ export const DashboardPage: React.FC = () => {
                     icon: MessageSquare,
                     label: 'Start Chat',
                     color: 'bg-green-500 hover:bg-green-600',
-                    path: '/chat',
-                    onClick: async () => {
-                      // trigger auto-session creation when they send first message
-                      navigate('/chat');
-                    }
+                    path: '/chat'
                   },
                   { 
                     icon: Brain, 
@@ -299,7 +295,6 @@ export const DashboardPage: React.FC = () => {
                     key={action.label}
                     to={action.path}
                     className={`${action.color} text-white p-4 rounded-lg transition-all duration-200 transform hover:scale-105 flex flex-col items-center gap-2 shadow-lg hover:shadow-xl`}
-                    onClick={action.onClick}
                   >
                     <action.icon className="w-6 h-6" />
                     <span className="text-sm font-medium text-center">{action.label}</span>
