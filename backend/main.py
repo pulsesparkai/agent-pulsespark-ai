@@ -35,10 +35,13 @@ CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost
 # CORS middleware for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS + [
+    allow_origins=[
+        "http://localhost:3000", 
+        "http://localhost:5173",
         "https://agent.pulsespark.ai",
         "https://agent-pulsespark-ai.vercel.app",
-        "https://*.vercel.app"
+        "https://*.vercel.app",
+        "*"  # Allow all origins temporarily for debugging
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
