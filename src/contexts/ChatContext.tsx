@@ -385,4 +385,4 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       {children}
     </ChatContext.Provider>
   );
-} ;
+};
