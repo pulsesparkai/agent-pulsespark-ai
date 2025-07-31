@@ -167,21 +167,22 @@ export const ProjectsList: React.FC<ProjectsListProps> = ({ className = '' }) =>
     try {
       // Create project with default file structure
       const newProject = {
-        name: createFormData.name.trim(),
-        description: createFormData.description.trim() || null,
-        file_tree: [
-          {
-            id: crypto.randomUUID(),
-            name: 'README.md',
-            type: 'file',
-            path: '/README.md',
-            content: `# ${createFormData.name.trim()}\n\n${createFormData.description.trim() || 'A new project created with PulseSpark AI'}\n\n## Getting Started\n\nThis project was generated using PulseSpark AI.\n`,
-            language: 'markdown',
-            lastModified: new Date().toISOString()
-          }
-        ],
-        github_branch: 'main'
-      };
+  user_id: user.id, // 🔥 MISSING FIELD - This is what was causing the RLS error!
+  name: createFormData.name.trim(),
+  description: createFormData.description.trim() || null,
+  file_tree: [
+    {
+      id: crypto.randomUUID(),
+      name: 'README.md',
+      type: 'file',
+      path: '/README.md',
+      content: `# ${createFormData.name.trim()}\n\n${createFormData.description.trim() || 'A new project created with PulseSpark AI'}\n\n## Getting Started\n\nThis project was generated using PulseSpark AI.\n`,
+      language: 'markdown',
+      lastModified: new Date().toISOString()
+    }
+  ],
+  github_branch: 'main'
+};
 
       const { data, error: createError } = await supabase
         .from('projects')
