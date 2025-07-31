@@ -36,6 +36,7 @@ app.add_middleware(
         "http://localhost:3000", 
         "http://localhost:5173",
         "https://agent.pulsespark.ai",
+        "https://agent-pulsespark-ai.vercel.app",
         "https://*.vercel.app"
     ],
     allow_credentials=True,
@@ -57,7 +58,7 @@ class APIProvider(str, Enum):
 
 class ChatMessage(BaseModel):
     """Individual chat message structure"""
-    role: str = Field(..., pattern="^(user|assistant|system)$")  # pattern instead of regex
+    role: str = Field(..., pattern="^(user|assistant|system)$")
     content: str = Field(..., min_length=1, max_length=50000)
     timestamp: Optional[str] = None
 
@@ -80,7 +81,7 @@ class GenerateRequest(BaseModel):
 
 class GenerateResponse(BaseModel):
     """Response model for successful generation"""
-    response: str
+    content: str
     provider: str
     timestamp: str
     tokens_used: Optional[int] = None
@@ -157,7 +158,7 @@ PROVIDER_CONFIGS = {
     }
 }
 
-# Supabase configuration for memory system
+# Supabase configuration
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
@@ -165,7 +166,7 @@ if SUPABASE_URL and SUPABASE_SERVICE_KEY:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 else:
     supabase = None
-    print("Warning: Supabase not configured - memory features will be disabled")
+    logger.warning("Supabase not configured - memory features will be disabled")
 
 class AIProviderClient:
     """Base class for AI provider clients with common functionality"""
@@ -261,7 +262,7 @@ class AIProviderClient:
             
             data = response.json()
             return {
-                "response": data["choices"][0]["message"]["content"],
+                "content": data["choices"][0]["message"]["content"],
                 "tokens_used": data.get("usage", {}).get("total_tokens")
             }
             
@@ -319,7 +320,7 @@ class AIProviderClient:
             
             data = response.json()
             return {
-                "response": data["content"][0]["text"],
+                "content": data["content"][0]["text"],
                 "tokens_used": data.get("usage", {}).get("output_tokens")
             }
             
@@ -372,7 +373,7 @@ class AIProviderClient:
             
             data = response.json()
             return {
-                "response": data["choices"][0]["message"]["content"],
+                "content": data["choices"][0]["message"]["content"],
                 "tokens_used": data.get("usage", {}).get("total_tokens")
             }
             
@@ -425,7 +426,7 @@ class AIProviderClient:
             
             data = response.json()
             return {
-                "response": data["choices"][0]["message"]["content"],
+                "content": data["choices"][0]["message"]["content"],
                 "tokens_used": data.get("usage", {}).get("total_tokens")
             }
             
@@ -478,7 +479,7 @@ class AIProviderClient:
             
             data = response.json()
             return {
-                "response": data["choices"][0]["message"]["content"],
+                "content": data["choices"][0]["message"]["content"],
                 "tokens_used": data.get("usage", {}).get("total_tokens")
             }
             
@@ -489,9 +490,9 @@ class AIProviderClient:
                 detail="Failed to connect to Mistral API"
             )
 
-# Dependency for authentication (placeholder - integrate with your auth system)
+# Dependency for authentication
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
-    """Validate user authentication token and return user information from auth.users"""
+    """Validate user authentication token and return user information"""
     if not supabase:
         raise HTTPException(
             status_code=503,
@@ -517,40 +518,89 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             status_code=401,
             detail="Authentication failed"
         )
+
+# Root endpoint - THIS WAS MISSING!
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "PulseSpark AI Backend",
+        "status": "running",
+        "version": "1.0.0",
+        "endpoints": {
+            "health": "/health",
+            "generate": "/generate",
+            "providers": "/providers",
+            "docs": "/docs"
+        }
+    }
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
+    }
+
+# Provider status endpoint
+@app.get("/providers")
+async def get_providers():
+    """Get list of supported providers and their status"""
+    return {
+        "providers": [
+            {
+                "name": provider.value,
+                "display_name": provider.value.title(),
+                "status": "available"
+            }
+            for provider in APIProvider
+        ]
+    }
+
+# Main generate endpoint
+@app.post("/generate", response_model=GenerateResponse)
+async def generate_code(
+    request: GenerateRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Generate AI responses using the selected provider and user's API key"""
+    
+    logger.info(f"Generate request from user {request.user_id} using {request.api_provider}")
     
     try:
-        response = supabase.auth.get_user(credentials.credentials)
-        if not response.user:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid authentication token"
+        # Create provider client with user's API key
+        async with AIProviderClient(request.api_key, request.api_provider) as client:
+            
+            # Generate response using the selected provider
+            result = await client.generate_response(
+                request.conversation_history,
+                request.prompt
             )
-        
-        return {
-            "user_id": response.user.id,
-            "email": response.user.email,
-            "authenticated": True
-        }
+            
+            # Return successful response
+            return GenerateResponse(
+                content=result["content"],
+                provider=request.api_provider.value,
+                timestamp=datetime.utcnow().isoformat(),
+                tokens_used=result.get("tokens_used")
+            )
+            
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Authentication error: {e}")
+        logger.error(f"Unexpected error in generate endpoint: {e}")
         raise HTTPException(
-            status_code=401,
-            detail="Authentication failed"
+            status_code=500,
+            detail="Internal server error occurred during generation"
         )
 
 # Memory System Endpoints
-
 @app.post("/memory/save")
 async def save_memory(request: MemoryItem, current_user: dict = Depends(get_current_user)):
-    """Save a memory item to the database with auto-extracted tech tags"""
-    # Security: Verify user can only access their own data
-    if request.user_id != current_user["user_id"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: can only access your own data"
-        )
-    
-    # Validate user can only access their own data
+    """Save a memory item to the database"""
     if request.user_id != current_user["user_id"]:
         raise HTTPException(
             status_code=403,
@@ -564,14 +614,6 @@ async def save_memory(request: MemoryItem, current_user: dict = Depends(get_curr
         )
     
     try:
-        # Auto-extract tech tags from text if none provided
-        tech_terms = ['react', 'vue', 'angular', 'javascript', 'typescript', 'python', 'java', 'api', 'database', 'authentication', 'jwt', 'oauth', 'css', 'html', 'nodejs', 'express', 'mongodb', 'postgresql', 'mysql', 'redis', 'docker', 'aws', 'github', 'git', 'bug', 'error', 'fix', 'component', 'hook', 'state', 'props']
-        
-        if not request.tags:
-            words = request.text.lower().split()
-            request.tags = list(set([word for word in words if word in tech_terms]))
-        
-        # Save to Supabase memory_items table
         result = supabase.table("memory_items").insert({
             "user_id": request.user_id,
             "project_id": request.project_id,
@@ -601,15 +643,7 @@ async def save_memory(request: MemoryItem, current_user: dict = Depends(get_curr
 
 @app.post("/memory/search")
 async def search_memory(request: MemorySearchRequest, current_user: dict = Depends(get_current_user)):
-    """Search memory items using PostgreSQL full-text search"""
-    # Security: Verify user can only access their own data
-    if request.user_id != current_user["user_id"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: can only access your own data"
-        )
-    
-    # Validate user can only access their own data
+    """Search memory items"""
     if request.user_id != current_user["user_id"]:
         raise HTTPException(
             status_code=403,
@@ -623,13 +657,11 @@ async def search_memory(request: MemorySearchRequest, current_user: dict = Depen
         )
     
     try:
-        # Build PostgreSQL full-text search query
         query_builder = supabase.table("memory_items").select("*").eq("user_id", request.user_id)
         
         if request.project_id:
             query_builder = query_builder.eq("project_id", request.project_id)
         
-        # Use PostgreSQL text search
         query_builder = query_builder.text_search("text", request.query)
         result = query_builder.order("created_at", desc=True).limit(request.limit).execute()
         
@@ -646,127 +678,6 @@ async def search_memory(request: MemorySearchRequest, current_user: dict = Depen
             detail=f"Failed to search memories: {str(e)}"
         )
 
-@app.get("/memory/recent/{user_id}")
-async def get_recent_memories(
-    user_id: str, 
-    project_id: Optional[str] = None, 
-    limit: int = 10, 
-    current_user: dict = Depends(get_current_user)
-):
-    """Get recent memory items for a user"""
-    # Security: Verify user can only access their own data
-    if user_id != current_user["user_id"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied: can only access your own data"
-        )
-    
-    # Validate user can only access their own data
-    if user_id != current_user["user_id"]:
-        raise HTTPException(
-            status_code=403,
-            detail="Access denied: can only access your own data"
-        )
-    
-    if not supabase:
-        raise HTTPException(
-            status_code=503,
-            detail="Memory system not available - Supabase not configured"
-        )
-    
-    try:
-        query_builder = supabase.table("memory_items").select("*").eq("user_id", user_id)
-        
-        if project_id:
-            query_builder = query_builder.eq("project_id", project_id)
-        
-        result = query_builder.order("created_at", desc=True).limit(limit).execute()
-        
-        return {
-            "memories": result.data, 
-            "count": len(result.data)
-        }
-        
-    except Exception as e:
-        logger.error(f"Error getting recent memories: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get recent memories: {str(e)}"
-        )
-
-# Main endpoint
-@app.post("/generate", response_model=GenerateResponse)
-async def generate_code(
-    request: GenerateRequest,
-    current_user: dict = Depends(get_current_user)
-):
-    """
-    Generate AI responses using the selected provider and user's API key.
-    
-    This endpoint:
-    1. Validates the incoming request
-    2. Routes to the appropriate AI provider
-    3. Handles authentication with user's API key
-    4. Returns the generated response or appropriate error
-    """
-    
-    # Log request (without sensitive data)
-    logger.info(f"Generate request from user {request.user_id} using {request.api_provider}")
-    
-    try:
-        # Create provider client with user's API key
-        async with AIProviderClient(request.api_key, request.api_provider) as client:
-            
-            # Generate response using the selected provider
-            result = await client.generate_response(
-                request.conversation_history,
-                request.prompt
-            )
-            
-            # Return successful response
-            return GenerateResponse(
-                response=result["response"],
-                provider=request.api_provider.value,
-                timestamp=datetime.utcnow().isoformat(),
-                tokens_used=result.get("tokens_used")
-            )
-            
-    except HTTPException:
-        # Re-raise HTTP exceptions (they're already properly formatted)
-        raise
-    except Exception as e:
-        # Log unexpected errors
-        logger.error(f"Unexpected error in generate endpoint: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error occurred during generation"
-        )
-
-# Health check endpoint
-@app.get("/health")
-async def health_check():
-    """Health check endpoint for monitoring"""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
-    }
-
-# Provider status endpoint
-@app.get("/providers")
-async def get_providers():
-    """Get list of supported providers and their status"""
-    return {
-        "providers": [
-            {
-                "name": provider.value,
-                "display_name": provider.value.title(),
-                "status": "available"
-            }
-            for provider in APIProvider
-        ]
-    }
-
 # Error handlers
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
@@ -777,14 +688,11 @@ async def http_exception_handler(request, exc):
         "timestamp": datetime.utcnow().isoformat()
     }
 
-
 if __name__ == "__main__":
     import uvicorn
     
-    # Get port from environment variable (Render provides this)
     port = int(os.environ.get("PORT", 8000))
     
-    # Run the application
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
