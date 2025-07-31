@@ -90,7 +90,7 @@ export const ApiKeysPage: React.FC<ApiKeysPageProps> = ({ className = '' }) => {
   const [providerFilter, setProviderFilter] = useState<'all' | ApiKeyProvider>('all');
 
   // Available providers for dropdown selection
-  const availableProviders: ApiKeyProvider[] = ['OpenAI', 'Claude', 'DeepSeek', 'Grok', 'Mistral'];
+  const availableProviders: ApiKeyProvider[] = ['OpenAI', 'Claude', 'DeepSeek', 'DeepSeek-R1', 'Grok', 'Mistral'];
 
   /**
    * Fetch API keys for the current user from Supabase
