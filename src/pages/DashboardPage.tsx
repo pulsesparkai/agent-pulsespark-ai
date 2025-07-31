@@ -17,7 +17,7 @@ import {
   Zap,
   ChevronRight
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface DashboardStats {
   projects: number;
@@ -43,6 +43,7 @@ export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const { apiKeys } = useApiKeys();
   const { showNotification } = useNotification();
+  const navigate = useNavigate();
 
   const [stats, setStats] = useState<DashboardStats>({
     projects: 0,
@@ -63,7 +64,6 @@ export const DashboardPage: React.FC = () => {
     try {
       setLoading(true);
 
-      // Fetch counts for all user's data
       const [projectsRes, chatSessionsRes, memoryItemsRes, feedbackRes] = await Promise.all([
         supabase.from('projects').select('id', { count: 'exact' }).eq('user_id', user.id),
         supabase.from('chat_sessions').select('id', { count: 'exact' }).eq('user_id', user.id),
@@ -79,9 +79,7 @@ export const DashboardPage: React.FC = () => {
         feedbackEntries: feedbackRes.count || 0
       });
 
-      // Load recent activity
       await loadRecentActivity();
-
     } catch (error: any) {
       showNotification('Failed to load dashboard data', 'error');
     } finally {
@@ -96,7 +94,6 @@ export const DashboardPage: React.FC = () => {
     if (!user) return;
 
     try {
-      // Get recent projects
       const { data: projects } = await supabase
         .from('projects')
         .select('id, name, updated_at')
@@ -104,7 +101,6 @@ export const DashboardPage: React.FC = () => {
         .order('updated_at', { ascending: false })
         .limit(3);
 
-      // Get recent chat sessions
       const { data: chats } = await supabase
         .from('chat_sessions')
         .select('id, title, updated_at')
@@ -112,7 +108,6 @@ export const DashboardPage: React.FC = () => {
         .order('updated_at', { ascending: false })
         .limit(3);
 
-      // Combine and sort by timestamp
       const activities: RecentActivity[] = [
         ...(projects || []).map(p => ({
           id: p.id,
@@ -283,14 +278,16 @@ export const DashboardPage: React.FC = () => {
                     color: 'bg-orange-500 hover:bg-orange-600',
                     path: '/api-keys'
                   },
- icon: MessageSquare, 
-  label: 'Start Chat', 
-  color: 'bg-green-500 hover:bg-green-600',
-  path: '/chat',
-  onClick: async () => {
-    // This will trigger auto-session creation when they send first message
-    navigate('/chat');
-  },
+                  {
+                    icon: MessageSquare,
+                    label: 'Start Chat',
+                    color: 'bg-green-500 hover:bg-green-600',
+                    path: '/chat',
+                    onClick: async () => {
+                      // trigger auto-session creation when they send first message
+                      navigate('/chat');
+                    }
+                  },
                   { 
                     icon: Brain, 
                     label: 'Add Memory', 
@@ -302,6 +299,7 @@ export const DashboardPage: React.FC = () => {
                     key={action.label}
                     to={action.path}
                     className={`${action.color} text-white p-4 rounded-lg transition-all duration-200 transform hover:scale-105 flex flex-col items-center gap-2 shadow-lg hover:shadow-xl`}
+                    onClick={action.onClick}
                   >
                     <action.icon className="w-6 h-6" />
                     <span className="text-sm font-medium text-center">{action.label}</span>
