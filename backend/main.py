@@ -29,12 +29,13 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Get CORS origins from environment variable
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
+
 # CORS middleware for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", 
-        "http://localhost:5173",
+    allow_origins=CORS_ORIGINS + [
         "https://agent.pulsespark.ai",
         "https://agent-pulsespark-ai.vercel.app",
         "https://*.vercel.app"
@@ -42,6 +43,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Security
@@ -519,7 +521,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             detail="Authentication failed"
         )
 
-# Root endpoint - THIS WAS MISSING!
+# Root endpoint
 @app.get("/")
 async def root():
     """Root endpoint"""
@@ -527,6 +529,7 @@ async def root():
         "message": "PulseSpark AI Backend",
         "status": "running",
         "version": "1.0.0",
+        "cors_origins": CORS_ORIGINS,
         "endpoints": {
             "health": "/health",
             "generate": "/generate",
@@ -542,7 +545,8 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "cors_configured": len(CORS_ORIGINS) > 0
     }
 
 # Provider status endpoint
