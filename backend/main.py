@@ -29,17 +29,26 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Get CORS origins from environment variable
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
-
-# CORS middleware for frontend integration
+# CRITICAL: Add CORS middleware IMMEDIATELY after app creation
+# This must be before any route definitions
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,  # Must be False when origins=["*"]
+    allow_origins=["*"],  # Allow all origins for now
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
+
+# Add a second middleware to ensure headers are set
+@app.middleware("http")
+async def add_cors_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 # Security
 security = HTTPBearer()
@@ -524,7 +533,7 @@ async def root():
         "message": "PulseSpark AI Backend",
         "status": "running",
         "version": "1.0.0",
-        "cors_origins": CORS_ORIGINS,
+        "cors_origins": ["*"],
         "endpoints": {
             "health": "/health",
             "generate": "/generate",
@@ -541,7 +550,7 @@ async def health_check():
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
         "version": "1.0.0",
-        "cors_configured": len(CORS_ORIGINS) > 0
+        "cors_configured": True
     }
 
 # Provider status endpoint
@@ -558,6 +567,12 @@ async def get_providers():
             for provider in APIProvider
         ]
     }
+
+# OPTIONS handler for /generate endpoint
+@app.options("/generate")
+async def generate_options():
+    """Handle OPTIONS preflight request for /generate endpoint"""
+    return {"message": "OK"}
 
 # Main generate endpoint
 @app.post("/generate", response_model=GenerateResponse)
