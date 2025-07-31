@@ -1,32 +1,67 @@
-// src/services/ai.service.ts
-import { supabase } from '../lib/supabase';
+/**
+ * AI Service for PulseSpark AI
+ * Handles communication with the FastAPI backend at api.pulsespark.ai
+ */
 
-export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp?: string;
-}
+import { supabase } from '../lib/supabase';
+import { API_CONFIG } from '../lib/config';
+import type { ApiKeyProvider, ChatMessage, AIProviderMessage } from '../types';
 
 export interface GenerateRequest {
-  user_id: string;                       // matches backend “user_id”
+  user_id: string;
   prompt: string;
-  conversation_history: ChatMessage[];   // matches backend “conversation_history”
-  api_provider: string;                  // matches backend “api_provider”
+  conversation_history: AIProviderMessage[];
+  api_provider: string; // Backend expects lowercase
   api_key: string;
 }
 
 export interface GenerateResponse {
-  response: string;
+  content: string;
   provider: string;
-  timestamp: string;
+  model?: string;
   tokens_used?: number;
 }
 
-class AIService {
-  // 🔒 hard-code your prod URL here
-  private backendUrl = 'https://api.pulsespark.ai';
+// Map frontend provider names to backend enum values
+const PROVIDER_MAPPING: Record<string, string> = {
+  'OpenAI': 'openai',
+  'Claude': 'claude', 
+  'DeepSeek': 'deepseek',
+  'Grok': 'grok',
+  'Mistral': 'mistral'
+};
 
-  async getUserApiKey(provider: string, userId: string): Promise<string | null> {
+class AIService {
+  private baseUrl = API_CONFIG.BASE_URL;
+
+  /**
+   * Check if user has an API key for the specified provider
+   */
+  async hasApiKey(provider: ApiKeyProvider, userId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('api_keys')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('provider', provider)
+        .single();
+
+      if (error) {
+        console.log('No API key found for provider:', provider);
+        return false;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error('Error checking API key:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get decrypted API key for the specified provider
+   */
+  private async getApiKey(provider: ApiKeyProvider, userId: string): Promise<string> {
     try {
       const { data, error } = await supabase
         .from('api_keys')
@@ -36,108 +71,161 @@ class AIService {
         .single();
 
       if (error || !data) {
-        console.error('No API key found for provider:', provider);
-        return null;
+        throw new Error(`No API key found for ${provider}`);
       }
 
-      // if you ever encrypt, decrypt here. For now assume plain-text base64.
-      return atob(data.encrypted_key);
-    } catch (err) {
-      console.error('Error fetching API key:', err);
-      return null;
+      // Note: In a real app, you'd decrypt this key client-side
+      // For now, assuming the key is stored in a usable format
+      return data.encrypted_key;
+    } catch (error) {
+      console.error('Error fetching API key:', error);
+      throw new Error(`Failed to retrieve API key for ${provider}`);
     }
   }
 
-  async sendMessage(
-    message: string,
-    provider: string,
+  /**
+   * Generate AI response using the backend API
+   */
+  async generateResponse(
     userId: string,
-    projectId?: string,
+    prompt: string,
+    provider: ApiKeyProvider,
     conversationHistory: ChatMessage[] = []
   ): Promise<GenerateResponse> {
-    // 1) fetch the user’s stored key
-    const apiKey = await this.getUserApiKey(provider, userId);
-    if (!apiKey) {
-      throw new Error(
-        `No API key found for ${provider}. Please add your ${provider} key in Settings → API Keys.`
-      );
-    }
-
-    // 2) map UI “DeepSeek” → backend “deepseek”, etc
-    const providerMap: Record<string, string> = {
-      OpenAI: 'openai',
-      Claude: 'claude',
-      DeepSeek: 'deepseek',
-      Grok: 'grok',
-      Mistral: 'mistral',
-    };
-    const apiProvider = providerMap[provider] || provider.toLowerCase();
-
-    // 3) build exactly what your FastAPI expects
-    const requestBody: GenerateRequest = {
-      user_id: userId,
-      prompt: message,
-      conversation_history: conversationHistory,
-      api_provider: apiProvider,
-      api_key: apiKey,
-    };
-
     try {
-      // grab the Supabase session token to auth your FastAPI
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      // Get user's session token for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error('No authentication session found');
+      }
 
-      // 🔍 debug log so you can confirm it’s actually firing
-      console.log('📡 AIService calling:', this.backendUrl, '/generate');
+      // Get API key for the provider
+      const apiKey = await this.getApiKey(provider, userId);
 
-      const response = await fetch(`${this.backendUrl}/generate`, {
+      // Convert chat messages to the format expected by backend
+      const history: AIProviderMessage[] = conversationHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      // Map provider name to backend enum
+      const backendProvider = PROVIDER_MAPPING[provider];
+      if (!backendProvider) {
+        throw new Error(`Unsupported provider: ${provider}`);
+      }
+
+      // Prepare request payload
+      const requestBody: GenerateRequest = {
+        user_id: userId,
+        prompt,
+        conversation_history: history,
+        api_provider: backendProvider,
+        api_key: apiKey
+      };
+
+      console.log('Sending request to backend:', {
+        url: `${this.baseUrl}${API_CONFIG.ENDPOINTS.GENERATE}`,
+        provider: backendProvider,
+        userId,
+        historyLength: history.length
+      });
+
+      // Make request to backend
+      const response = await fetch(`${this.baseUrl}${API_CONFIG.ENDPOINTS.GENERATE}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: session ? `Bearer ${session.access_token}` : '',
+          'Authorization': `Bearer ${session.access_token}`,
+          'Origin': window.location.origin
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
-        const errPayload = await response.json().catch(() => ({ detail: 'Unknown error' }));
-        if (response.status === 401) {
-          throw new Error('Invalid API key. Please check your Settings.');
-        } else if (response.status === 429) {
-          throw new Error('Rate limit exceeded. Try again later.');
-        } else if (response.status === 503) {
-          throw new Error('Service unavailable. Please try again.');
+        const errorText = await response.text();
+        let errorMessage = `Backend error: ${response.status}`;
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.detail || errorJson.message || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
         }
-        throw new Error(errPayload.detail || errPayload.error || `Failed to get response`);
+        
+        throw new Error(errorMessage);
       }
 
-      const data: GenerateResponse = await response.json();
-      return data;
-    } catch (err: any) {
-      console.error('AI Service Error:', err);
-      if (err.message.includes('fetch')) {
-        throw new Error('Network error. Check your connection.');
+      const result: GenerateResponse = await response.json();
+      
+      console.log('Backend response received:', {
+        provider: result.provider,
+        contentLength: result.content?.length,
+        tokensUsed: result.tokens_used
+      });
+
+      return result;
+
+    } catch (error: any) {
+      console.error('AI Service Error:', error);
+      
+      // Provide helpful error messages
+      if (error.message?.includes('API key')) {
+        throw new Error(`API key issue for ${provider}: ${error.message}`);
+      } else if (error.message?.includes('authentication')) {
+        throw new Error('Please log in again to continue');
+      } else if (error.message?.includes('Network')) {
+        throw new Error('Network error - please check your connection');
+      } else {
+        throw new Error(error.message || `Failed to generate response using ${provider}`);
       }
-      throw err;
     }
   }
 
-  async hasApiKey(provider: string, userId: string): Promise<boolean> {
-    const key = await this.getUserApiKey(provider, userId);
-    return !!key;
+  /**
+   * Test connection to the backend API
+   */
+  async testConnection(): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/health`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      return response.ok;
+    } catch (error) {
+      console.error('Backend connection test failed:', error);
+      return false;
+    }
   }
 
-  private getDefaultModel(provider: string): string {
-    const models: Record<string, string> = {
-      openai: 'gpt-3.5-turbo',
-      claude: 'claude-3-sonnet-20240229',
-      deepseek: 'deepseek-chat',
-      grok: 'grok-beta',
-      mistral: 'mistral-medium',
-    };
-    return models[provider.toLowerCase()] || 'gpt-3.5-turbo';
+  /**
+   * Get available providers from backend
+   */
+  async getAvailableProviders(): Promise<string[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}${API_CONFIG.ENDPOINTS.PROVIDERS}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.providers || Object.keys(PROVIDER_MAPPING);
+      }
+    } catch (error) {
+      console.warn('Could not fetch providers from backend:', error);
+    }
+
+    // Fallback to hardcoded list
+    return Object.keys(PROVIDER_MAPPING);
   }
 }
 
+// Export singleton instance
 export const aiService = new AIService();
+export default aiService;
