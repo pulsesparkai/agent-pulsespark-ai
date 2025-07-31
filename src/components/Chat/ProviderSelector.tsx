@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, Brain } from 'lucide-react';
 import { ApiKeyProvider } from '../../types';
 import { useApiKeys } from '../../contexts/ApiKeysContext';
 
@@ -10,12 +10,13 @@ interface ProviderSelectorProps {
 }
 
 /**
- * Provider information with colors and styling
+ * UPDATED: Provider information with colors and styling - Added DeepSeek-R1
  */
-const PROVIDER_INFO: Record<ApiKeyProvider, { name: string; color: string; bgColor: string }> = {
+const PROVIDER_INFO: Record<ApiKeyProvider, { name: string; color: string; bgColor: string; icon?: React.ReactNode }> = {
   'OpenAI': { name: 'OpenAI', color: 'text-green-700', bgColor: 'bg-green-50' },
   'Claude': { name: 'Claude', color: 'text-purple-700', bgColor: 'bg-purple-50' },
-  'DeepSeek': { name: 'DeepSeek', color: 'text-blue-700', bgColor: 'bg-blue-50' },
+  'DeepSeek': { name: 'DeepSeek V3', color: 'text-blue-700', bgColor: 'bg-blue-50' },
+  'DeepSeek-R1': { name: 'DeepSeek R1', color: 'text-purple-700', bgColor: 'bg-purple-50', icon: <Brain className="w-3 h-3" /> },
   'Grok': { name: 'Grok', color: 'text-orange-700', bgColor: 'bg-orange-50' },
   'Mistral': { name: 'Mistral', color: 'text-red-700', bgColor: 'bg-red-50' }
 };
@@ -34,8 +35,19 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const { apiKeys } = useApiKeys();
 
-  // Get available providers based on user's API keys
-  const availableProviders = apiKeys.map(key => key.provider);
+  // UPDATED: Get available providers - DeepSeek-R1 shows if DeepSeek key exists
+  const configuredProviders = apiKeys.map(key => key.provider);
+  const availableProviders: ApiKeyProvider[] = [];
+  
+  // Add providers based on configured keys
+  configuredProviders.forEach(provider => {
+    availableProviders.push(provider);
+    // If DeepSeek is configured, also make DeepSeek-R1 available
+    if (provider === 'DeepSeek' && !availableProviders.includes('DeepSeek-R1')) {
+      availableProviders.push('DeepSeek-R1');
+    }
+  });
+
   const hasSelectedProviderKey = availableProviders.includes(selectedProvider);
 
   /**
@@ -74,57 +86,43 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
         `}
       >
         <div className={`w-2 h-2 rounded-full ${selectedInfo.bgColor} ${selectedInfo.color}`} />
-        <span className="text-sm font-medium">{selectedInfo.name}</span>
+        <div className="flex items-center gap-1">
+          {selectedInfo.icon}
+          <span className="text-sm font-medium">{selectedInfo.name}</span>
+        </div>
         <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <>
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 z-10" 
-            onClick={() => setIsOpen(false)}
-          />
-          
-          {/* Dropdown Content */}
-          <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-            <div className="py-1">
-              {availableProviders.map((provider) => {
-                const info = PROVIDER_INFO[provider];
-                const isSelected = provider === selectedProvider;
-                
-                return (
-                  <button
-                    key={provider}
-                    onClick={() => handleProviderSelect(provider)}
-                    className={`
-                      w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-50 transition-colors
-                      ${isSelected ? 'bg-blue-50' : ''}
-                    `}
-                  >
-                    <div className={`w-2 h-2 rounded-full ${info.bgColor} ${info.color}`} />
-                    <span className="text-sm font-medium text-gray-900 flex-1">
-                      {info.name}
-                    </span>
-                    {isSelected && (
-                      <Check className="w-4 h-4 text-blue-600" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+        <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+          {availableProviders.map((provider) => {
+            const info = PROVIDER_INFO[provider];
+            const isSelected = selectedProvider === provider;
             
-            {/* Warning for missing API key */}
-            {!hasSelectedProviderKey && (
-              <div className="border-t border-gray-200 px-3 py-2">
-                <p className="text-xs text-red-600">
-                  No API key for {selectedInfo.name}
-                </p>
-              </div>
-            )}
-          </div>
-        </>
+            return (
+              <button
+                key={provider}
+                onClick={() => handleProviderSelect(provider)}
+                className={`
+                  w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 transition-colors
+                  ${isSelected ? 'bg-blue-50' : ''}
+                  first:rounded-t-lg last:rounded-b-lg
+                `}
+              >
+                <div className={`w-2 h-2 rounded-full ${info.bgColor} ${info.color}`} />
+                <div className="flex items-center gap-1 flex-1">
+                  {info.icon}
+                  <span className="text-sm font-medium">{info.name}</span>
+                  {provider === 'DeepSeek-R1' && (
+                    <span className="text-xs text-purple-600">🧠 Reasoning</span>
+                  )}
+                </div>
+                {isSelected && <Check className="w-4 h-4 text-blue-600" />}
+              </button>
+            );
+          })}
+        </div>
       )}
     </div>
   );
