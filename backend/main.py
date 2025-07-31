@@ -141,7 +141,7 @@ PROVIDER_CONFIGS = {
         "temperature": 0.7
     },
     APIProvider.DEEPSEEK: {
-        "base_url": "https://api.deepseek.com/v1",
+        "base_url": "https://api.deepseek.com/",
         "chat_endpoint": "/chat/completions",
         "default_model": "deepseek-chat",
         "max_tokens": 4000,
