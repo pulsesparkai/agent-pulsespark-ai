@@ -1,3 +1,6 @@
+// File: src/types/index.ts
+// COMPLETE FILE - Copy and paste this entire content
+
 // Type definitions for the application
 
 export interface User {
@@ -16,7 +19,8 @@ export interface ApiKey {
   updated_at: string;
 }
 
-export type ApiKeyProvider = 'OpenAI' | 'Claude' | 'DeepSeek' | 'Grok' | 'Mistral';
+// UPDATED: Added DeepSeek-R1 to provider types
+export type ApiKeyProvider = 'OpenAI' | 'Claude' | 'DeepSeek' | 'DeepSeek-R1' | 'Grok' | 'Mistral';
 
 export interface CreateApiKeyRequest {
   provider: ApiKeyProvider;
