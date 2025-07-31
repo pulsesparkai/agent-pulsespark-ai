@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useNotification } from './NotificationContext';
 
-// Type definitions for AI provider management
-export type AIProvider = 'OpenAI' | 'Claude' | 'DeepSeek' | 'Grok' | 'Mistral';
+// UPDATED: Type definitions for AI provider management - Added DeepSeek-R1
+export type AIProvider = 'OpenAI' | 'Claude' | 'DeepSeek' | 'DeepSeek-R1' | 'Grok' | 'Mistral';
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -63,7 +63,7 @@ export const useAIProvider = (): AIProviderContextType => {
   return context;
 };
 
-// Provider configurations with API endpoints and default settings
+// UPDATED: Provider configurations with DeepSeek R1-0528 support and increased token limits
 const PROVIDER_CONFIGS: Record<AIProvider, Omit<ProviderConfig, 'apiKey'>> = {
   OpenAI: {
     name: 'OpenAI',
@@ -79,9 +79,15 @@ const PROVIDER_CONFIGS: Record<AIProvider, Omit<ProviderConfig, 'apiKey'>> = {
   },
   DeepSeek: {
     name: 'DeepSeek',
-    baseUrl: 'https://api.deepseek.com/',
-    defaultModel: 'deepseek-chat',
-    maxTokens: 4000
+    baseUrl: 'https://api.deepseek.com',  // FIXED: Removed trailing slash and /v1
+    defaultModel: 'deepseek-chat',  // V3 model
+    maxTokens: 32000  // UPDATED: Increased from 4000 to 32K
+  },
+  'DeepSeek-R1': {  // NEW: DeepSeek R1-0528 reasoning model
+    name: 'DeepSeek-R1',
+    baseUrl: 'https://api.deepseek.com',
+    defaultModel: 'deepseek-reasoner',  // R1-0528 model
+    maxTokens: 32000  // 32K default, can go up to 64K
   },
   Grok: {
     name: 'Grok',
@@ -121,8 +127,8 @@ export const AIProviderProvider: React.FC<AIProviderProviderProps> = ({ children
   
   const { showNotification } = useNotification();
   
-  // Available providers list (all supported providers)
-  const availableProviders: AIProvider[] = ['OpenAI', 'Claude', 'DeepSeek', 'Grok', 'Mistral'];
+  // UPDATED: Available providers list - Added DeepSeek-R1
+  const availableProviders: AIProvider[] = ['OpenAI', 'Claude', 'DeepSeek', 'DeepSeek-R1', 'Grok', 'Mistral'];
 
   /**
    * Securely store API key for a specific provider
@@ -336,7 +342,7 @@ export const AIProviderProvider: React.FC<AIProviderProviderProps> = ({ children
   }, []);
 
   /**
-   * Call DeepSeek API with proper formatting and error handling
+   * Call DeepSeek API (V3 Chat Model) with proper formatting and error handling
    * 
    * @param apiKey - DeepSeek API key
    * @param messages - Formatted conversation messages
@@ -369,6 +375,45 @@ export const AIProviderProvider: React.FC<AIProviderProviderProps> = ({ children
     return {
       content: data.choices[0].message.content,
       provider: 'DeepSeek',
+      tokensUsed: data.usage?.total_tokens,
+      model: config.defaultModel
+    };
+  }, []);
+
+  /**
+   * NEW: Call DeepSeek R1 API (R1-0528 Reasoning Model) with proper formatting and error handling
+   * 
+   * @param apiKey - DeepSeek API key (same as regular DeepSeek)
+   * @param messages - Formatted conversation messages
+   * @returns AI response content and metadata
+   */
+  const callDeepSeekR1 = useCallback(async (apiKey: string, messages: ChatMessage[]): Promise<AIResponse> => {
+    const config = PROVIDER_CONFIGS['DeepSeek-R1'];
+    
+    const response = await fetch(`${config.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: config.defaultModel,  // 'deepseek-reasoner'
+        messages,
+        max_tokens: config.maxTokens,  // 32K tokens for reasoning
+        temperature: 0.6,  // Slightly lower for reasoning tasks
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `DeepSeek R1 API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    return {
+      content: data.choices[0].message.content,
+      provider: 'DeepSeek-R1',
       tokensUsed: data.usage?.total_tokens,
       model: config.defaultModel
     };
@@ -486,7 +531,7 @@ export const AIProviderProvider: React.FC<AIProviderProviderProps> = ({ children
       // Format messages for API call
       const messages = formatMessages(conversationHistory, prompt);
       
-      // Route to appropriate provider API
+      // UPDATED: Route to appropriate provider API - Added DeepSeek-R1 case
       let response: AIResponse;
       
       switch (selectedProvider) {
@@ -498,6 +543,9 @@ export const AIProviderProvider: React.FC<AIProviderProviderProps> = ({ children
           break;
         case 'DeepSeek':
           response = await callDeepSeek(apiKey, messages);
+          break;
+        case 'DeepSeek-R1':  // NEW: Handle DeepSeek R1 separately
+          response = await callDeepSeekR1(apiKey, messages);
           break;
         case 'Grok':
           response = await callGrok(apiKey, messages);
@@ -549,6 +597,7 @@ export const AIProviderProvider: React.FC<AIProviderProviderProps> = ({ children
     callOpenAI, 
     callClaude, 
     callDeepSeek, 
+    callDeepSeekR1,  // NEW: Added DeepSeek R1 handler
     callGrok, 
     callMistral, 
     showNotification
