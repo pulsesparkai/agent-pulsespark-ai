@@ -42,7 +42,6 @@ app.add_middleware(
 )
 
 # Add a second middleware to ensure headers are set
-@app.middleware("http")
 async def add_cors_headers(request, call_next):
     response = await call_next(request)
     response.headers["Access-Control-Allow-Origin"] = "*"
